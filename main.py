@@ -2,7 +2,9 @@ from src.telegram.telegram_bot import TelegramBot
 
 
 def main():
+
     bot = TelegramBot()
+
     bot.iniciar()
 
 

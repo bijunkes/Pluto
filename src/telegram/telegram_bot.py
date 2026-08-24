@@ -19,8 +19,6 @@ from telegram.ext import (
 
 from src.services.gemini_service import GeminiService
 from src.services.compra_service import CompraService
-from src.database.database import Database
-
 
 class TelegramBot:
 
@@ -30,16 +28,10 @@ class TelegramBot:
 
         self.token = os.environ["TELEGRAM_BOT_TOKEN"]
 
-        # Serviços da aplicação
+        # Serviço do Gemini para análise de imagens
         self.gemini_service = GeminiService()
-        self.database = Database()
 
-        self.compra_service = CompraService(
-            self.gemini_service,
-            self.database
-        )
-
-        # Cria aplicação do Telegram
+        # Aplicação do Telegram
         self.app = (
             Application
             .builder()
@@ -47,10 +39,12 @@ class TelegramBot:
             .build()
         )
 
+        # Registra todos os comandos
         self._configurar_handlers()
 
     def _configurar_handlers(self):
 
+        # Comando para iniciar o bot
         self.app.add_handler(
             CommandHandler(
                 "start",
@@ -58,7 +52,7 @@ class TelegramBot:
             )
         )
 
-        # Fotos
+        # Recebe fotos do usuário
         self.app.add_handler(
             MessageHandler(
                 filters.PHOTO,
@@ -66,7 +60,7 @@ class TelegramBot:
             )
         )
 
-        # Mensagens de texto
+        # Receve mensagens de texto
         self.app.add_handler(
             MessageHandler(
                 filters.TEXT & ~filters.COMMAND,
@@ -74,15 +68,39 @@ class TelegramBot:
             )
         )
 
-        # Confirmar compra
+        # Confirma a compra
         self.app.add_handler(
             CallbackQueryHandler(
                 self.confirmar_compra,
                 pattern="^confirmar$"
             )
         )
-
-        # Cancelar compra
+        
+        # Não confirmar -> Escolher categoria
+        self.app.add_handler(
+            CallbackQueryHandler(
+                self.escolher_categoria,
+                pattern="^escolher_categoria$"
+            )
+        )
+        
+        # Cria categoria
+        self.app.add_handler(
+            CallbackQueryHandler(
+                self.criar_categoria,
+                pattern="^criar_categoria$"
+            )
+        )
+        
+        # Seleciona categoria
+        self.app.add_handler(
+            CallbackQueryHandler(
+                self.selecionar_categoria,
+                pattern="^categoria:"
+            )
+        )
+        
+        # Cancela a compra
         self.app.add_handler(
             CallbackQueryHandler(
                 self.cancelar_compra,
@@ -97,7 +115,7 @@ class TelegramBot:
     ):
 
         await update.message.reply_text(
-            "Olá! Eu sou o Pluto 💰\n"
+            "Olá! Eu sou o Pluto\n"
             "Envie uma mensagem com uma compra para começar."
         )
 
@@ -107,15 +125,82 @@ class TelegramBot:
         context: ContextTypes.DEFAULT_TYPE
     ):
 
+        # Usuário está criando uma categoria
+        if context.user_data.get("criando_categoria"):
+
+            nome_categoria = update.message.text.strip()
+
+            usuario_id = update.effective_user.id
+
+            service = CompraService(
+                usuario_id,
+                self.gemini_service
+            )
+
+            compra = context.user_data.get(
+                "compra_pendente"
+            )
+
+            try:
+
+                # Cria a categoria
+                service.adicionar_categoria(
+                    nome_categoria
+                )
+
+                # Salva a compra usando a nova categoria
+                if compra:
+
+                    service.confirmar_compra_com_categoria(
+                        compra,
+                        nome_categoria
+                    )
+
+                # Limpa os dados
+                context.user_data.pop(
+                    "criando_categoria",
+                    None
+                )
+
+                context.user_data.pop(
+                    "compra_pendente",
+                    None
+                )
+
+                await update.message.reply_text(
+                    f"Categoria '{nome_categoria}' criada.\n\n"
+                    f"Compra registrada com sucesso"
+                )
+
+            except Exception as e:
+
+                print(
+                    f"Erro ao criar categoria/salvar compra: {e}"
+                )
+
+                await update.message.reply_text(
+                    "Não foi possível criar a categoria "
+                    "ou salvar a compra."
+                )
+
+            return
+
         mensagem = update.message.text
+        usuario_id = update.effective_user.id
+
+        # Decide qual serviço de IA utilizar
+        service = CompraService(
+            usuario_id,
+            self.gemini_service
+        )
 
         await update.message.reply_text(
-            "🔎 Analisando sua compra..."
+            "Analisando sua compra..."
         )
 
         try:
 
-            resultado = self.compra_service.processar_compra(
+            resultado = service.processar_compra(
                 mensagem=mensagem
             )
 
@@ -124,7 +209,7 @@ class TelegramBot:
             print(f"Erro ao analisar compra: {e}")
 
             await update.message.reply_text(
-                "❌ Não consegui analisar a compra agora. "
+                "Não consegui analisar a compra agora. "
                 "Tente novamente em alguns segundos."
             )
 
@@ -143,9 +228,16 @@ class TelegramBot:
     ):
 
         mensagem = update.message.caption or ""
+        usuario_id = update.effective_user.id
+
+        # Encaminha a imagem para o Gemini
+        service = CompraService(
+            usuario_id,
+            self.gemini_service
+        )
 
         await update.message.reply_text(
-            "🔎 Analisando sua compra..."
+            "Analisando sua compra..."
         )
 
         foto = update.message.photo[-1]
@@ -154,11 +246,13 @@ class TelegramBot:
 
         caminho = "produto.jpg"
 
-        await arquivo.download_to_drive(caminho)
+        await arquivo.download_to_drive(
+            caminho
+        )
 
         try:
 
-            resultado = self.compra_service.processar_compra(
+            resultado = service.processar_compra(
                 imagem_path=caminho,
                 mensagem=mensagem
             )
@@ -168,7 +262,7 @@ class TelegramBot:
             print(f"Erro ao analisar imagem: {e}")
 
             await update.message.reply_text(
-                "❌ Não consegui analisar a imagem agora. "
+                "Não consegui analisar a imagem agora. "
                 "Tente novamente em alguns segundos."
             )
 
@@ -187,8 +281,10 @@ class TelegramBot:
         resultado
     ):
 
-        # Guarda a compra até o usuário confirmar
-        context.user_data["compra_pendente"] = resultado
+        # Guarda temporariamente a compra na memória até o usuário escolher o que fazer
+        context.user_data[
+            "compra_pendente"
+        ] = resultado
 
         botoes = [
             [
@@ -197,16 +293,18 @@ class TelegramBot:
                     callback_data="confirmar"
                 ),
                 InlineKeyboardButton(
-                    "❌ Cancelar",
-                    callback_data="cancelar"
+                    "❌ Não confirmar",
+                    callback_data="escolher_categoria"
                 )
             ]
         ]
 
-        teclado = InlineKeyboardMarkup(botoes)
+        teclado = InlineKeyboardMarkup(
+            botoes
+        )
 
         await update.message.reply_text(
-            f"🛍️ Compra identificada:\n\n"
+            f"Compra identificada:\n\n"
             f"Produto: {resultado['produto']}\n"
             f"Categoria: {resultado['categoria']}\n"
             f"Valor: R$ {resultado['valor']:.2f}\n\n"
@@ -231,14 +329,22 @@ class TelegramBot:
         if compra is None:
 
             await query.edit_message_text(
-                "❌ Não encontrei uma compra pendente."
+                "Não encontrei uma compra pendente."
             )
 
             return
 
+        usuario_id = update.effective_user.id
+
+        service = CompraService(
+            usuario_id,
+            self.gemini_service
+        )
+
         try:
 
-            self.compra_service.confirmar_compra(
+            # Salva a compra
+            service.confirmar_compra(
                 compra
             )
 
@@ -253,10 +359,12 @@ class TelegramBot:
 
         except Exception as e:
 
-            print(f"Erro ao salvar compra: {e}")
+            print(
+                f"Erro ao salvar compra: {e}"
+            )
 
             await query.edit_message_text(
-                "❌ Não foi possível registrar a compra."
+                "Erro ao salvar a compra."
             )
 
     async def cancelar_compra(
@@ -269,17 +377,147 @@ class TelegramBot:
 
         await query.answer()
 
+        # Remove a compra
         context.user_data.pop(
             "compra_pendente",
             None
         )
 
         await query.edit_message_text(
-            "❌ Compra não registrada."
+            "Compra não registrada."
         )
 
     def iniciar(self):
 
-        print("Pluto Telegram iniciado!")
+        print(
+            "Pluto Telegram iniciado!"
+        )
 
         self.app.run_polling()
+        
+    async def escolher_categoria(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE
+    ):
+
+        query = update.callback_query
+
+        await query.answer()
+
+        usuario_id = update.effective_user.id
+
+        # Busca as categorias do banco do usuário
+        service = CompraService(
+            usuario_id,
+            self.gemini_service
+        )
+
+        categorias = service.database.listar_categorias()
+
+        botoes = []
+
+        for categoria in categorias:
+
+            botoes.append([
+                InlineKeyboardButton(
+                    categoria[1],
+                    callback_data=f"categoria:{categoria[1]}"
+                )
+            ])
+
+        # Cadastro de nova categoria
+        botoes.append([
+            InlineKeyboardButton(
+                "➕ Criar categoria",
+                callback_data="criar_categoria"
+            )
+        ])
+
+        teclado = InlineKeyboardMarkup(botoes)
+
+        await query.edit_message_text(
+            "Escolha a categoria da compra:",
+            reply_markup=teclado
+        )
+        
+    async def selecionar_categoria(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE
+    ):
+
+        query = update.callback_query
+
+        await query.answer()
+
+        # Pega o nome da categoria escolhida
+        categoria = query.data.split(
+            ":",
+            1
+        )[1]
+
+        compra = context.user_data.get(
+            "compra_pendente"
+        )
+
+        if compra is None:
+
+            await query.edit_message_text(
+                "❌ Não encontrei a compra pendente."
+            )
+
+            return
+
+        usuario_id = update.effective_user.id
+
+        service = CompraService(
+            usuario_id,
+            self.gemini_service
+        )
+
+        try:
+
+            # Salva a compra
+            service.confirmar_compra_com_categoria(
+                compra,
+                categoria
+            )
+
+            context.user_data.pop(
+                "compra_pendente",
+                None
+            )
+
+            await query.edit_message_text(
+                f"✅ Compra registrada!\n"
+                f"Categoria: {categoria}"
+            )
+
+        except Exception as e:
+
+            print(
+                f"Erro ao salvar compra: {e}"
+            )
+
+            await query.edit_message_text(
+                "❌ Erro ao salvar a compra."
+            )
+            
+    async def criar_categoria(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE
+    ):
+
+        query = update.callback_query
+
+        await query.answer()
+
+        # Ativa a criação de categoria
+        # A próxima mensagem vai ser interpretada como o nome de uma nova categoria
+        context.user_data["criando_categoria"] = True
+
+        await query.edit_message_text(
+            "Digite o nome da nova categoria:"
+        )

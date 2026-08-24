@@ -1,6 +1,7 @@
-.venv/
+data/
+*.db
+produto.jpg
 __pycache__/
 *.pyc
 .env
-pluto.db
-produto.jpg
+.venv/

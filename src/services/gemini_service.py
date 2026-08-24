@@ -11,6 +11,7 @@ from src.config.categorias import CATEGORIAS
 class GeminiService:
 
     def __init__(self):
+
         load_dotenv()
 
         self.client = genai.Client(
@@ -19,9 +20,15 @@ class GeminiService:
 
         self.categorias = CATEGORIAS
 
-    def analisar_compra(self, imagem_path=None, mensagem=""):
+    def analisar_compra(
+        self,
+        imagem_path=None,
+        mensagem=""
+    ):
 
-        categorias_disponiveis = ", ".join(self.categorias)
+        categorias_disponiveis = ", ".join(
+            self.categorias
+        )
 
         prompt = f"""
         Você é o sistema de análise de compras do Pluto.
@@ -55,6 +62,7 @@ class GeminiService:
         contents = []
 
         if imagem_path:
+
             with open(imagem_path, "rb") as f:
                 imagem = f.read()
 
