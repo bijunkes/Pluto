@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pluto · Dashboard</title>
+<link rel="stylesheet" href="style.css">
+
+<script>
+  // Aplica o tema antes da página aparecer para evitar o "flash" do tema errado.
+  (function aplicarTemaInicial() {
+    const salvo = localStorage.getItem("pluto_tema");
+    const sistema = window.matchMedia("(prefers-color-scheme: light)").matches
+      ? "light"
+      : "dark";
+    document.documentElement.dataset.theme = salvo || sistema;
+  })();
+</script>
+</head>
+<body>
+
+<div class="pagina" id="pagina" hidden>
+
+  <header class="topo">
+    <div>
+      <p class="marca">Pluto<span>.</span></p>
+      <p class="marca-tagline">Seu copiloto financeiro</p>
+    </div>
+
+    <div class="acoes-topo">
+      <button
+        class="tema-toggle"
+        id="btn-tema"
+        type="button"
+        aria-label="Alternar tema"
+        title="Alternar tema">
+        <span class="icone-tema" id="icone-tema" aria-hidden="true">☾</span>
+      </button>
+
+      <button class="sair" id="btn-sair" type="button">Sair</button>
+    </div>
+  </header>
+
+  <section class="resumo">
+    <div class="resumo-item destaque">
+      <p class="rotulo">Total registrado</p>
+      <p class="valor numero" id="total-gasto">R$ 0,00</p>
+    </div>
+
+    <div class="resumo-item">
+      <p class="rotulo">Compras</p>
+      <p class="valor numero" id="total-compras">0</p>
+    </div>
+  </section>
+
+  <section class="secao">
+    <h2>Últimas compras</h2>
+    <ul class="recibo" id="lista-compras"></ul>
+    <p class="vazio" id="compras-vazio" hidden>Nenhuma compra registrada ainda. Manda uma pro bot!</p>
+  </section>
+
+  <section class="secao">
+    <h2>Registrar compra</h2>
+    <form id="form-compra" class="form-linha">
+      <input type="text" id="campo-produto" placeholder="Produto" required>
+      <select id="campo-categoria" required></select>
+      <input type="number" id="campo-valor" placeholder="Valor" step="0.01" min="0" required>
+      <button type="submit" class="botao">Salvar</button>
+    </form>
+    <p class="form-erro" id="compra-erro"></p>
+  </section>
+
+  <section class="secao">
+    <h2>Categorias</h2>
+    <div class="categorias-lista" id="lista-categorias"></div>
+    <form id="form-categoria" class="form-categoria">
+      <input type="text" id="campo-nova-categoria" placeholder="Nova categoria" required>
+      <button type="submit" class="botao">Criar</button>
+    </form>
+    <p class="form-erro" id="categoria-erro"></p>
+  </section>
+
+</div>
+
+<div class="tela-central" id="tela-carregando">
+  <div class="cartao-login">
+    <p class="marca">Pluto<span>.</span></p>
+    <div class="spinner" aria-hidden="true"></div>
+    <p class="status-texto">Carregando seu dashboard…</p>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+(async function iniciar() {
+
+  let usuarioId = sessionStorage.getItem("pluto_usuario_id");
+
+  try {
+
+    if (!usuarioId) {
+      const sessao = await PlutoAPI.usuarioAtual();
+      usuarioId = sessao.usuario_id;
+    }
+
+  } catch (_) {
+
+    document.getElementById("tela-carregando").innerHTML = `
+      <div class="cartao-login erro">
+        <p class="marca">Pluto<span>.</span></p>
+        <div class="status-erro">
+          <strong>Você não está logado</strong>
+          <p>Abra o dashboard pelo botão que o bot manda no comando /dashboard.</p>
+        </div>
+      </div>`;
+
+    return;
+  }
+
+  document.getElementById("tela-carregando").remove();
+  document.getElementById("pagina").hidden = false;
+
+  // ---------- tema ----------
+  const btnTema = document.getElementById("btn-tema");
+  const iconeTema = document.getElementById("icone-tema");
+
+  function atualizarBotaoTema() {
+    const tema = document.documentElement.dataset.theme;
+    const claro = tema === "light";
+
+    iconeTema.textContent = claro ? "☀" : "☾";
+    btnTema.setAttribute(
+      "aria-label",
+      claro ? "Ativar modo escuro" : "Ativar modo claro"
+    );
+    btnTema.setAttribute(
+      "title",
+      claro ? "Modo escuro" : "Modo claro"
+    );
+  }
+
+  atualizarBotaoTema();
+
+  btnTema.addEventListener("click", () => {
+    const atual = document.documentElement.dataset.theme;
+    const novo = atual === "light" ? "dark" : "light";
+
+    document.documentElement.dataset.theme = novo;
+    localStorage.setItem("pluto_tema", novo);
+    atualizarBotaoTema();
+  });
+
+  // ---------- dashboard ----------
+  const listaCompras = document.getElementById("lista-compras");
+  const comprasVazio = document.getElementById("compras-vazio");
+  const totalGasto = document.getElementById("total-gasto");
+  const totalCompras = document.getElementById("total-compras");
+  const campoCategoria = document.getElementById("campo-categoria");
+  const listaCategorias = document.getElementById("lista-categorias");
+
+  function formatarMoeda(valor) {
+    return valor.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL"
+    });
+  }
+
+  function formatarData(isoTexto) {
+    const data = new Date(isoTexto.replace(" ", "T") + "Z");
+    if (isNaN(data)) return isoTexto;
+    return data.toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "short"
+    });
+  }
+
+  async function carregarCompras() {
+    const compras = await PlutoAPI.listarCompras(usuarioId);
+
+    listaCompras.innerHTML = "";
+    comprasVazio.hidden = compras.length > 0;
+
+    let soma = 0;
+
+    for (const compra of compras) {
+      soma += compra.valor;
+
+      const item = document.createElement("li");
+      item.innerHTML = `
+        <span>
+          <span class="produto">${compra.produto}</span>
+          <span class="meta">${compra.categoria} · ${formatarData(compra.data)}</span>
+        </span>
+        <span class="valor numero">${formatarMoeda(compra.valor)}</span>`;
+
+      listaCompras.appendChild(item);
+    }
+
+    totalGasto.textContent = formatarMoeda(soma);
+    totalCompras.textContent = compras.length;
+  }
+
+  async function carregarCategorias() {
+    const categorias = await PlutoAPI.listarCategorias(usuarioId);
+
+    campoCategoria.innerHTML = "";
+    listaCategorias.innerHTML = "";
+
+    for (const categoria of categorias) {
+      const opcao = document.createElement("option");
+      opcao.value = categoria.nome;
+      opcao.textContent = categoria.nome;
+      campoCategoria.appendChild(opcao);
+
+      const chip = document.createElement("span");
+      chip.className = "categoria-chip";
+      chip.textContent = categoria.nome;
+      listaCategorias.appendChild(chip);
+    }
+  }
+
+  await Promise.all([carregarCompras(), carregarCategorias()]);
+
+  document.getElementById("form-compra").addEventListener("submit", async (evento) => {
+    evento.preventDefault();
+
+    const erro = document.getElementById("compra-erro");
+    erro.textContent = "";
+
+    const produto = document.getElementById("campo-produto").value.trim();
+    const categoria = campoCategoria.value;
+    const valor = parseFloat(document.getElementById("campo-valor").value);
+
+    try {
+      await PlutoAPI.criarCompra(usuarioId, { produto, categoria, valor });
+      evento.target.reset();
+      await carregarCompras();
+    } catch (e) {
+      erro.textContent = e.message;
+    }
+  });
+
+  document.getElementById("form-categoria").addEventListener("submit", async (evento) => {
+    evento.preventDefault();
+
+    const erro = document.getElementById("categoria-erro");
+    erro.textContent = "";
+
+    const campo = document.getElementById("campo-nova-categoria");
+    const nome = campo.value.trim();
+
+    try {
+      await PlutoAPI.criarCategoria(usuarioId, nome);
+      campo.value = "";
+      await carregarCategorias();
+    } catch (e) {
+      erro.textContent = e.message;
+    }
+  });
+
+  document.getElementById("btn-sair").addEventListener("click", async () => {
+    await PlutoAPI.sair();
+    sessionStorage.removeItem("pluto_usuario_id");
+    window.location.href = "login.html";
+  });
+
+})();
+</script>
+
+</body>
+</html>
