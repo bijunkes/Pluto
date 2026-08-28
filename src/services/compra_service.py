@@ -1,64 +1,47 @@
 from src.services.gemini_service import GeminiService
-from src.services.llama_service import LlamaService
 from src.database.database import Database
 
 class CompraService:
 
     def __init__(
-        self,
-        usuario_id,
-        gemini_service=None,
-        llama_service=None
+    self,
+    usuario_id,
+    gemini_service=None
     ):
         """
         Inicializa o serviço responsável pelo processamento das compras.
-
         Cada usuário possui seu próprio banco de dados.
-        O Gemini analisa imagens e o Llama interpreta
-        mensagens de texto.
+        O Gemini analisa tanto mensagens de texto quanto imagens.
         """
 
-        # Banco exclusivo do usuário
+        ### Banco exclusivo do usuário
+
         self.database = Database(usuario_id)
 
-        # Serviço responsável pela análise de imagens
-        self.gemini = (
-            gemini_service
-            if gemini_service
-            else GeminiService()
-        )
+        # Serviço do Gemini unificado para texto e imagem
 
-        # Serviço responsável pela interpretação de mensagens
-        self.llama = (
-            llama_service
-            if llama_service
-            else LlamaService()
+        self.gemini = (
+        gemini_service
+        if gemini_service
+        else GeminiService()
         )
 
     def processar_compra(
-        self,
-        mensagem,
-        imagem_path=None
+    self,
+    mensagem,
+    imagem_path=None
     ):
         """
-        Processa uma compra utilizando o serviço adequado.
+        Processa uma compra utilizando o Gemini. 
 
-        - Com imagem → Gemini
-        - Somente texto → Llama
+        O Gemini analisa o texto direto ou combina com a imagem se houver.
         """
+        # Agora o Gemini Service gerencia de forma inteligente se há imagem ou não
 
-        if imagem_path:
-
-            resultado = self.gemini.analisar_compra(
-                imagem_path=imagem_path,
-                mensagem=mensagem
-            )
-
-        else:
-
-            resultado = self.llama.analisar_mensagem(
-                mensagem=mensagem
-            )
+        resultado = self.gemini.analisar_mensagem(
+        mensagem=mensagem,
+        imagem_path=imagem_path
+        )
 
         print("\nCompra identificada:")
         print(f"Produto: {resultado['produto']}")
@@ -74,9 +57,9 @@ class CompraService:
         """
 
         self.database.salvar_compra(
-            produto=resultado["produto"],
-            categoria=resultado["categoria"],
-            valor=resultado["valor"]
+        produto=resultado["produto"],
+        categoria=resultado["categoria"],
+        valor=resultado["valor"]
         )
 
         print("\nCompra salva com sucesso!")
@@ -89,9 +72,9 @@ class CompraService:
         self.database.adicionar_categoria(nome)
 
     def confirmar_compra_com_categoria(
-        self,
-        resultado,
-        categoria
+    self,
+    resultado,
+    categoria
     ):
         """
         Salva uma compra utilizando uma categoria
@@ -99,7 +82,7 @@ class CompraService:
         """
 
         self.database.salvar_compra(
-            produto=resultado["produto"],
-            categoria=categoria,
-            valor=resultado["valor"]
+        produto=resultado["produto"],
+        categoria=categoria,
+        valor=resultado["valor"]
         )

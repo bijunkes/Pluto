@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entrando · Pluto</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="tela-central">
+  <div class="cartao-login" id="cartao">
+    <p class="marca">Pluto<span>.</span></p>
+
+    <div class="status-ok">
+      <div class="spinner" aria-hidden="true"></div>
+      <p class="status-texto" id="texto-status">Abrindo seu dashboard…</p>
+    </div>
+
+    <div class="status-erro">
+      <strong id="erro-titulo">Não foi possível entrar</strong>
+      <p id="erro-detalhe">Peça um novo link ao bot com o comando /dashboard.</p>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+(async function entrar() {
+
+  const cartao = document.getElementById("cartao");
+  const parametros = new URLSearchParams(window.location.search);
+  const token = parametros.get("token");
+
+  function mostrarErro(mensagem) {
+    document.getElementById("erro-detalhe").textContent = mensagem;
+    cartao.classList.add("erro");
+  }
+
+  if (!token) {
+    mostrarErro("Esse link está sem o token de acesso. Abra o link enviado pelo bot.");
+    return;
+  }
+
+  try {
+
+    const sessao = await PlutoAPI.trocarTokenPorSessao(token);
+
+    document.getElementById("texto-status").textContent = "Tudo certo, redirecionando…";
+
+    // Guarda o usuario_id só pra evitar uma chamada extra a /auth/me
+    // assim que a página do dashboard carregar.
+    sessionStorage.setItem("pluto_usuario_id", sessao.usuario_id);
+
+    window.location.replace("index.html");
+
+  } catch (erro) {
+
+    mostrarErro(erro.message || "O link pode ter expirado.");
+  }
+
+})();
+</script>
+
+</body>
+</html>

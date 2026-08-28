@@ -111,6 +111,19 @@ class Database:
 
         return categorias
 
+    def listar_nomes_categorias(self):
+        """
+        Retorna apenas os nomes das categorias do usuário,
+        já incluindo as que ele criou manualmente pelo bot
+        ou pelo dashboard. Útil para validar compras antes
+        de salvar (API, importação de CSV, etc).
+        """
+
+        return [
+            categoria[1]
+            for categoria in self.listar_categorias()
+        ]
+
     def salvar_compra(
         self,
         produto,
@@ -162,7 +175,47 @@ class Database:
         )
 
         conn.commit()
+
+        # Retorna o id da compra recém-criada, já que duas
+        # compras podem ter o mesmo timestamp (CURRENT_TIMESTAMP
+        # tem precisão de segundo) e não dá pra confiar em
+        # "a última da lista" pra identificar qual foi inserida.
+        compra_id = cursor.lastrowid
+
         conn.close()
+
+        return compra_id
+
+    def buscar_compra(self, compra_id):
+        """
+        Busca uma única compra pelo id, já com o nome da
+        categoria resolvido. Retorna None se não existir.
+        """
+
+        conn = self.conectar()
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT
+                compras.id,
+                compras.produto,
+                categorias.nome,
+                compras.valor,
+                compras.data
+            FROM compras
+            JOIN categorias
+                ON compras.categoria_id = categorias.id
+            WHERE compras.id = ?
+            """,
+            (compra_id,)
+        )
+
+        compra = cursor.fetchone()
+
+        conn.close()
+
+        return compra
 
     def listar_compras(self):
 

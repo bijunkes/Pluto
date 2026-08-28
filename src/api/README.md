@@ -3,7 +3,7 @@
 Backend HTTP compartilhado entre o bot do Telegram e o dashboard web.
 Expõe a mesma lógica de negócio que já existia (`CompraService`,
 `Database`) como endpoints REST, além de importação de CSV e do login
-via link do bot.
+via link mágico do bot.
 
 ## Como rodar
 
@@ -72,3 +72,16 @@ que restringe a categoria a uma lista fixa.
 Linhas inválidas não interrompem a importação: o resultado retorna
 quantas linhas foram inseridas com sucesso e uma lista de erros por
 linha.
+
+## Próximos passos sugeridos
+
+- Revogar sessões individualmente (ex: tabela de sessões no banco em
+  vez de apenas um token assinado) caso precise de um "sair de todos
+  os dispositivos".
+- Rate limiting em `/auth/sessao`, já que é o endpoint que valida os
+  tokens de login.
+- Migrar de SQLite por usuário para um banco único (ex: Postgres via
+  Supabase) se o volume de dados ou a concorrência entre bot e
+  dashboard começar a gerar contenção nos arquivos `.db`.
+- Endpoints de análise de padrões e recomendações, reaproveitando
+  `Database.listar_compras()` como fonte de dados.

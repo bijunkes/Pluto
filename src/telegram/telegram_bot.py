@@ -19,6 +19,8 @@ from telegram.ext import (
 
 from src.services.gemini_service import GeminiService
 from src.services.compra_service import CompraService
+from src.services.exceptions import AnaliseIAError
+from src.services.auth_service import gerar_link_login
 
 class TelegramBot:
 
@@ -49,6 +51,14 @@ class TelegramBot:
             CommandHandler(
                 "start",
                 self.start
+            )
+        )
+
+        # Envia o link mágico de acesso ao dashboard web
+        self.app.add_handler(
+            CommandHandler(
+                "dashboard",
+                self.abrir_dashboard
             )
         )
 
@@ -116,7 +126,34 @@ class TelegramBot:
 
         await update.message.reply_text(
             "Olá! Eu sou o Pluto\n"
-            "Envie uma mensagem com uma compra para começar."
+            "Envie uma mensagem com uma compra para começar.\n\n"
+            "Use /dashboard para abrir seu painel web."
+        )
+
+    async def abrir_dashboard(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE
+    ):
+
+        usuario_id = update.effective_user.id
+
+        # Gera um link assinado e de curta duração. Quem abrir
+        # esse link já entra logado como esse usuario_id, sem
+        # precisar digitar senha nenhuma.
+        link = gerar_link_login(usuario_id)
+
+        botao = InlineKeyboardButton(
+            "📊 Abrir Dashboard",
+            url=link
+        )
+
+        teclado = InlineKeyboardMarkup([[botao]])
+
+        await update.message.reply_text(
+            "Clique no botão abaixo para abrir seu dashboard.\n"
+            "Por segurança, o link expira em 5 minutos.",
+            reply_markup=teclado
         )
 
     async def receber_mensagem(
@@ -204,6 +241,18 @@ class TelegramBot:
                 mensagem=mensagem
             )
 
+        except AnaliseIAError as e:
+
+            print(f"Erro ao analisar compra (IA): {e}")
+
+            await update.message.reply_text(
+                "Não consegui entender essa compra. "
+                "Tente descrever novamente, incluindo o "
+                "produto e o valor pago."
+            )
+
+            return
+
         except Exception as e:
 
             print(f"Erro ao analisar compra: {e}")
@@ -256,6 +305,17 @@ class TelegramBot:
                 imagem_path=caminho,
                 mensagem=mensagem
             )
+
+        except AnaliseIAError as e:
+
+            print(f"Erro ao analisar imagem (IA): {e}")
+
+            await update.message.reply_text(
+                "Não consegui identificar essa compra pela imagem. "
+                "Tente enviar outra foto ou descreva a compra por texto."
+            )
+
+            return
 
         except Exception as e:
 

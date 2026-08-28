@@ -27,43 +27,6 @@
 
 * { box-sizing: border-box; }
 
-/* ---------- transição entre temas ---------- */
-
-html,
-body,
-.pagina,
-.cartao-login,
-.resumo-item,
-.secao,
-.tema-toggle,
-.sair,
-.form-linha input,
-.form-linha select,
-.categoria-chip {
-  transition:
-    background-color 0.35s ease,
-    border-color 0.35s ease,
-    color 0.35s ease,
-    box-shadow 0.35s ease;
-}
-
-body::before,
-body::after {
-  transition:
-    opacity 0.35s ease,
-    border-color 0.35s ease,
-    box-shadow 0.35s ease;
-}
-
-.marca-selo,
-.botao {
-  transition:
-    background-color 0.35s ease,
-    color 0.35s ease,
-    border-color 0.35s ease,
-    box-shadow 0.35s ease;
-}
-
 html { color-scheme: dark; }
 
 /* ---------- tema claro ---------- */
