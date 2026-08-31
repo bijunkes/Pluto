@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 
@@ -18,7 +20,7 @@ class CompraOut(BaseModel):
     produto: str
     categoria: str
     valor: float
-    data: str
+    data: datetime
 
 
 class CategoriaCreate(BaseModel):

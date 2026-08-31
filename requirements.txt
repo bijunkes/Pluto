@@ -7,3 +7,4 @@ python-multipart>=0.0.9
 pandas>=2.2
 google-genai>=0.3
 itsdangerous>=2.2
+psycopg[binary]
