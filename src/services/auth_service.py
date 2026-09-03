@@ -1,11 +1,6 @@
 import os
 
-from itsdangerous import (
-    BadSignature,
-    SignatureExpired,
-    URLSafeTimedSerializer
-)
-
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 # Validade do link mágico enviado pelo bot (em segundos).
 # Curto de propósito: é só o tempo pra o usuário clicar no botão.
@@ -37,8 +32,8 @@ def _chave_secreta():
         raise RuntimeError(
             "AUTH_SECRET_KEY não configurada. Defina uma chave "
             "secreta longa e aleatória no .env. Você pode gerar "
-            "uma com: python -c \"import secrets; "
-            "print(secrets.token_hex(32))\""
+            'uma com: python -c "import secrets; '
+            'print(secrets.token_hex(32))"'
         )
 
     return chave
@@ -51,10 +46,7 @@ def _serializer(salt):
     pode ser reaproveitado como token de sessão (nem vice-versa).
     """
 
-    return URLSafeTimedSerializer(
-        _chave_secreta(),
-        salt=salt
-    )
+    return URLSafeTimedSerializer(_chave_secreta(), salt=salt)
 
 
 def gerar_link_login(usuario_id, dashboard_url=None):
@@ -67,8 +59,7 @@ def gerar_link_login(usuario_id, dashboard_url=None):
     token = _serializer("login").dumps(usuario_id)
 
     base_url = dashboard_url or os.environ.get(
-        "DASHBOARD_URL",
-        "https://girdle-unstaffed-frequency.ngrok-free.dev"
+        "DASHBOARD_URL", "https://girdle-unstaffed-frequency.ngrok-free.dev"
     )
 
     return f"{base_url.rstrip('/')}/login.html?token={token}"
@@ -83,10 +74,7 @@ def validar_token_login(token):
 
     try:
 
-        return _serializer("login").loads(
-            token,
-            max_age=VALIDADE_LINK_LOGIN
-        )
+        return _serializer("login").loads(token, max_age=VALIDADE_LINK_LOGIN)
 
     except SignatureExpired:
 
@@ -96,9 +84,7 @@ def validar_token_login(token):
 
     except BadSignature:
 
-        raise TokenInvalidoError(
-            "Link de login inválido."
-        )
+        raise TokenInvalidoError("Link de login inválido.")
 
 
 def gerar_sessao(usuario_id):
@@ -120,10 +106,7 @@ def validar_sessao(token):
 
     try:
 
-        return _serializer("sessao").loads(
-            token,
-            max_age=VALIDADE_SESSAO
-        )
+        return _serializer("sessao").loads(token, max_age=VALIDADE_SESSAO)
 
     except SignatureExpired:
 

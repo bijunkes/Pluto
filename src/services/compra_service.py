@@ -1,46 +1,30 @@
-from src.services.gemini_service import GeminiService
+from src.services.ia_service import IAService
 from src.database.database import Database
 
 
 class CompraService:
 
-    def __init__(
-        self,
-        usuario_id,
-        gemini_service=None
-    ):
+    def __init__(self, usuario_id, ia_service=None):
         """
         Inicializa o serviço responsável pelo processamento
         das compras do usuário.
-
-        O usuario_id corresponde ao ID do usuário no Telegram.
         """
 
-        # Banco PostgreSQL compartilhado.
-        # O Database utiliza o telegram_id para isolar
-        # os dados personalizados de cada usuário.
         self.database = Database(usuario_id)
 
-        # Serviço responsável pela análise das compras
-        # utilizando inteligência artificial.
-        self.gemini = (
-            gemini_service
-            if gemini_service
-            else GeminiService()
-        )
+        self.ia = ia_service if ia_service else IAService()
 
-    def processar_compra(
-        self,
-        mensagem,
-        imagem_path=None
-    ):
+    # =========================================================
+    # COMPRA
+    # =========================================================
+
+    def processar_compra(self, mensagem, imagem_path=None):
         """
         Analisa uma compra utilizando o Gemini.
         """
 
-        resultado = self.gemini.analisar_mensagem(
-            mensagem=mensagem,
-            imagem_path=imagem_path
+        resultado = self.ia.analisar_mensagem(
+            mensagem=mensagem, imagem_path=imagem_path
         )
 
         print("\nCompra identificada:")
@@ -50,21 +34,41 @@ class CompraService:
 
         return resultado
 
-    def confirmar_compra(self, resultado):
+    def confirmar_compra(self, resultado, conta_id):
         """
         Salva uma compra utilizando a categoria
-        identificada pela IA.
+        identificada pela IA e a conta escolhida
+        pelo usuário.
         """
 
         compra_id = self.database.salvar_compra(
             produto=resultado["produto"],
             categoria=resultado["categoria"],
-            valor=resultado["valor"]
+            conta_id=conta_id,
+            valor=resultado["valor"],
         )
 
         print("\nCompra salva com sucesso!")
 
         return compra_id
+
+    def confirmar_compra_com_categoria(self, resultado, categoria, conta_id):
+        """
+        Salva uma compra utilizando uma categoria
+        escolhida manualmente e uma conta escolhida
+        pelo usuário.
+        """
+
+        return self.database.salvar_compra(
+            produto=resultado["produto"],
+            categoria=categoria,
+            conta_id=conta_id,
+            valor=resultado["valor"],
+        )
+
+    # =========================================================
+    # CATEGORIAS
+    # =========================================================
 
     def adicionar_categoria(self, nome):
         """
@@ -74,81 +78,63 @@ class CompraService:
 
         return self.database.adicionar_categoria(nome)
 
-    def confirmar_compra_com_categoria(
-        self,
-        resultado,
-        categoria
-    ):
-        """
-        Salva uma compra utilizando uma categoria
-        escolhida manualmente pelo usuário.
-        """
-
-        return self.database.salvar_compra(
-            produto=resultado["produto"],
-            categoria=categoria,
-            valor=resultado["valor"]
-        )
-
     def listar_categorias(self):
-        """
-        Retorna as categorias padrão e as categorias
-        personalizadas disponíveis para o usuário.
-        """
-
         return self.database.listar_categorias()
 
     def listar_nomes_categorias(self):
-        """
-        Retorna apenas os nomes das categorias
-        disponíveis para o usuário.
-        """
-
         return self.database.listar_nomes_categorias()
 
-    def listar_compras(
-        self,
-        data_inicio=None,
-        data_fim=None
-    ):
-        """
-        Retorna as compras do usuário.
+    def categoria_existe(self, nome):
+        return self.database.categoria_existe(nome)
 
-        Opcionalmente permite filtrar por período.
+    # =========================================================
+    # CONTAS
+    # =========================================================
+
+    def listar_contas(self):
+        """
+        Retorna as contas ativas do usuário.
         """
 
-        return self.database.listar_compras(
-            data_inicio=data_inicio,
-            data_fim=data_fim
-        )
+        return self.database.listar_contas()
+
+    def listar_nomes_contas(self):
+        """
+        Retorna apenas os nomes das contas ativas.
+        """
+
+        return self.database.listar_nomes_contas()
+
+    def buscar_conta(self, conta_id):
+        """
+        Busca uma conta pelo ID.
+        """
+
+        return self.database.buscar_conta(conta_id)
+
+    def adicionar_conta(self, nome, tipo, saldo=0):
+        """
+        Adiciona uma nova conta para o usuário.
+        """
+
+        return self.database.adicionar_conta(nome=nome, tipo=tipo, saldo=saldo)
+
+    # =========================================================
+    # HISTÓRICO DE COMPRAS
+    # =========================================================
+
+    def listar_compras(self, data_inicio=None, data_fim=None):
+        return self.database.listar_compras(data_inicio=data_inicio, data_fim=data_fim)
 
     def buscar_compra(self, compra_id):
-        """
-        Busca uma compra específica do usuário.
-        """
-
-        return self.database.buscar_compra(
-            compra_id
-        )
+        return self.database.buscar_compra(compra_id)
 
     def excluir_compra(self, compra_id):
-        """
-        Exclui uma compra pertencente ao usuário.
-        """
+        return self.database.excluir_compra(compra_id)
 
-        return self.database.excluir_compra(
-            compra_id
-        )
-
-    def categoria_existe(self, nome):
-        """
-        Verifica se uma categoria está disponível
-        para o usuário.
-        """
-
-        return self.database.categoria_existe(
-            nome
-        )
+    # =========================================================
+    # ESTATÍSTICAS
+    # =========================================================
 
     def calcular_total(self):
         """
@@ -157,7 +143,4 @@ class CompraService:
 
         compras = self.database.listar_compras()
 
-        return sum(
-            compra[3]
-            for compra in compras
-        )
+        return sum(compra[4] for compra in compras)

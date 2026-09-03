@@ -1,5 +1,6 @@
 import os
 import json
+import time
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -8,6 +9,7 @@ from src.config.categorias import CATEGORIAS
 from src.services.exceptions import AnaliseIAError
 from src.services.ia_utils import extrair_json, validar_resultado_compra
 
+
 class GeminiService:
 
     # Garante que a chave de API existe antes de iniciar o cliente
@@ -15,11 +17,11 @@ class GeminiService:
         load_dotenv()
 
         if "GEMINI_API_KEY" not in os.environ:
-            raise AnaliseIAError("A variável de ambiente GEMINI_API_KEY não foi configurada no arquivo .env")
+            raise AnaliseIAError(
+                "A variável de ambiente GEMINI_API_KEY não foi configurada no arquivo .env"
+            )
 
-        self.client = genai.Client(
-            api_key=os.environ["GEMINI_API_KEY"]
-        )
+        self.client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
         self.categorias = CATEGORIAS
 
     def analisar_mensagem(self, mensagem, imagem_path=None):
@@ -68,10 +70,7 @@ class GeminiService:
                 with open(imagem_path, "rb") as f:
                     imagem = f.read()
                 contents.append(
-                    types.Part.from_bytes(
-                        data=imagem,
-                        mime_type="image/jpeg"
-                    )
+                    types.Part.from_bytes(data=imagem, mime_type="image/jpeg")
                 )
             except Exception as e:
                 raise AnaliseIAError(f"Erro ao ler a imagem enviada: {str(e)}")
@@ -80,31 +79,57 @@ class GeminiService:
 
         try:
 
-            # Utilizando o modelo flash recomendado para tarefas de texto/multimodal estruturado
+            max_tentativas = 3
 
-            response = self.client.models.generate_content(
-                model="gemini-3.6-flash",
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=types.Schema(
-                        type="OBJECT",
-                        properties={
-                            "produto": types.Schema(type="STRING"),
-                            "categoria": types.Schema(type="STRING"),
-                            "valor": types.Schema(type="NUMBER")
-                        },
-                        required=["produto", "categoria", "valor"]
+            for tentativa in range(max_tentativas):
+
+                try:
+
+                    response = self.client.models.generate_content(
+                        model="gemini-3.6-flash",
+                        contents=contents,
+                        config=types.GenerateContentConfig(
+                            response_mime_type="application/json",
+                            response_schema=types.Schema(
+                                type="OBJECT",
+                                properties={
+                                    "produto": types.Schema(type="STRING"),
+                                    "categoria": types.Schema(type="STRING"),
+                                    "valor": types.Schema(type="NUMBER"),
+                                },
+                                required=["produto", "categoria", "valor"],
+                            ),
+                        ),
                     )
-                )
-            )
+
+                    break
+
+                except Exception as e:
+
+                    erro = str(e)
+
+                    # Só tenta novamente em erros temporários
+                    if "503" in erro or "UNAVAILABLE" in erro or "high demand" in erro:
+
+                        if tentativa < max_tentativas - 1:
+
+                            espera = 2**tentativa
+
+                            print(
+                                f"Gemini indisponível. "
+                                f"Tentativa {tentativa + 1}/{max_tentativas}. "
+                                f"Aguardando {espera}s..."
+                            )
+
+                            time.sleep(espera)
+
+                            continue
+
+                    # Outros erros não devem ser repetidos
+                    raise
 
         except Exception as e:
+
             raise AnaliseIAError(
-                f"Não foi possível se comunicar com o Gemini. Detalhes: {str(e)}"
+                f"Não foi possível se comunicar com o Gemini. " f"Detalhes: {str(e)}"
             ) from e
-
-        ### Processa o texto puro retornado e valida com as funções utilitárias do projeto
-
-        resultado = extrair_json(response.text)
-        return validar_resultado_compra(resultado, self.categorias)

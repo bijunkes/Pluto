@@ -7,4 +7,5 @@ class AnaliseIAError(Exception):
     quanto respostas que não vêm em um JSON válido ou que
     não têm os campos esperados (produto, categoria, valor).
     """
+
     pass

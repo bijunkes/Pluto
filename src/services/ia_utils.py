@@ -16,9 +16,7 @@ def extrair_json(texto):
 
     if not texto or not texto.strip():
 
-        raise AnaliseIAError(
-            "A IA retornou uma resposta vazia."
-        )
+        raise AnaliseIAError("A IA retornou uma resposta vazia.")
 
     texto = texto.strip()
 
@@ -33,10 +31,7 @@ def extrair_json(texto):
 
     # Remove blocos de código markdown (```json ... ``` ou ``` ... ```)
     texto_sem_blocos = re.sub(
-        r"^```(?:json)?\s*|\s*```$",
-        "",
-        texto,
-        flags=re.IGNORECASE | re.MULTILINE
+        r"^```(?:json)?\s*|\s*```$", "", texto, flags=re.IGNORECASE | re.MULTILINE
     ).strip()
 
     try:
@@ -63,9 +58,7 @@ def extrair_json(texto):
                 "Não foi possível interpretar o JSON retornado pela IA."
             ) from e
 
-    raise AnaliseIAError(
-        "A resposta da IA não contém um JSON reconhecível."
-    )
+    raise AnaliseIAError("A resposta da IA não contém um JSON reconhecível.")
 
 
 def validar_resultado_compra(resultado, categorias):
@@ -79,9 +72,7 @@ def validar_resultado_compra(resultado, categorias):
 
     if not isinstance(resultado, dict):
 
-        raise AnaliseIAError(
-            "A resposta da IA não é um objeto JSON."
-        )
+        raise AnaliseIAError("A resposta da IA não é um objeto JSON.")
 
     campos_obrigatorios = ("produto", "categoria", "valor")
 
@@ -89,9 +80,7 @@ def validar_resultado_compra(resultado, categorias):
 
         if campo not in resultado:
 
-            raise AnaliseIAError(
-                f"A resposta da IA não contém o campo '{campo}'."
-            )
+            raise AnaliseIAError(f"A resposta da IA não contém o campo '{campo}'.")
 
     try:
 
@@ -99,9 +88,7 @@ def validar_resultado_compra(resultado, categorias):
 
     except (TypeError, ValueError) as e:
 
-        raise AnaliseIAError(
-            "O valor retornado pela IA não é um número válido."
-        ) from e
+        raise AnaliseIAError("O valor retornado pela IA não é um número válido.") from e
 
     if not isinstance(resultado["produto"], str) or not resultado["produto"].strip():
 

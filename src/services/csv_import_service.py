@@ -4,7 +4,6 @@ import pandas as pd
 
 from src.services.exceptions import AnaliseIAError
 
-
 # Nomes de coluna aceitos no CSV, por campo. O usuário pode exportar
 # a planilha com nomes um pouco diferentes (ex: "Preço" em vez de
 # "Valor"), então tentamos casar por sinônimo em vez de exigir um
@@ -25,6 +24,7 @@ class ImportacaoCSVError(Exception):
     resumo da importação), este erro interrompe a importação
     inteira antes mesmo de começar.
     """
+
     pass
 
 
@@ -66,9 +66,7 @@ def _parsear_valor(valor_bruto):
     em um float. Lança ValueError se não conseguir interpretar.
     """
 
-    if valor_bruto is None or (
-        isinstance(valor_bruto, float) and pd.isna(valor_bruto)
-    ):
+    if valor_bruto is None or (isinstance(valor_bruto, float) and pd.isna(valor_bruto)):
 
         raise ValueError("valor ausente")
 
@@ -118,35 +116,25 @@ def importar_csv(database, caminho_arquivo):
 
     except Exception as e:
 
-        raise ImportacaoCSVError(
-            "Não foi possível ler o arquivo como CSV."
-        ) from e
+        raise ImportacaoCSVError("Não foi possível ler o arquivo como CSV.") from e
 
     if df.empty:
 
-        raise ImportacaoCSVError(
-            "O arquivo CSV não contém nenhuma linha."
-        )
+        raise ImportacaoCSVError("O arquivo CSV não contém nenhuma linha.")
 
     colunas_normalizadas = {
-        _normalizar_nome_coluna(coluna): coluna
-        for coluna in df.columns
+        _normalizar_nome_coluna(coluna): coluna for coluna in df.columns
     }
 
     coluna_produto = _encontrar_coluna(
-        colunas_normalizadas,
-        SINONIMOS_COLUNAS["produto"]
+        colunas_normalizadas, SINONIMOS_COLUNAS["produto"]
     )
 
     coluna_categoria = _encontrar_coluna(
-        colunas_normalizadas,
-        SINONIMOS_COLUNAS["categoria"]
+        colunas_normalizadas, SINONIMOS_COLUNAS["categoria"]
     )
 
-    coluna_valor = _encontrar_coluna(
-        colunas_normalizadas,
-        SINONIMOS_COLUNAS["valor"]
-    )
+    coluna_valor = _encontrar_coluna(colunas_normalizadas, SINONIMOS_COLUNAS["valor"])
 
     if coluna_produto is None or coluna_valor is None:
 
@@ -156,9 +144,7 @@ def importar_csv(database, caminho_arquivo):
             f"{list(df.columns)}"
         )
 
-    categorias_existentes = set(
-        database.listar_nomes_categorias()
-    )
+    categorias_existentes = set(database.listar_nomes_categorias())
 
     total_linhas = len(df)
     inseridas = 0
@@ -202,23 +188,12 @@ def importar_csv(database, caminho_arquivo):
 
                 categorias_existentes.add(categoria)
 
-            database.salvar_compra(
-                produto=produto,
-                categoria=categoria,
-                valor=valor
-            )
+            database.salvar_compra(produto=produto, categoria=categoria, valor=valor)
 
             inseridas += 1
 
         except Exception as e:
 
-            erros.append({
-                "linha": numero_linha,
-                "motivo": str(e)
-            })
+            erros.append({"linha": numero_linha, "motivo": str(e)})
 
-    return {
-        "total_linhas": total_linhas,
-        "inseridas": inseridas,
-        "erros": erros
-    }
+    return {"total_linhas": total_linhas, "inseridas": inseridas, "erros": erros}
