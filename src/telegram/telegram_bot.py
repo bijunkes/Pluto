@@ -44,6 +44,13 @@ class TelegramBot:
         # Comando para iniciar o bot
         self.app.add_handler(CommandHandler("start", self.start))
 
+        # Menu principal
+        self.app.add_handler(CommandHandler("menu", self.menu))
+
+        self.app.add_handler(
+            CallbackQueryHandler(self.menu_callback, pattern="^menu:")
+        )
+
         # Envia o link de acesso ao dashboard web
         self.app.add_handler(CommandHandler("dashboard", self.abrir_dashboard))
 
@@ -65,6 +72,11 @@ class TelegramBot:
 
         # Lista as compras do usuário
         self.app.add_handler(CommandHandler("compras", self.listar_compras))
+
+        # Lista as contas do usuário
+        self.app.add_handler(
+            CommandHandler("contas", self.listar_contas)
+        )
 
         self.app.add_handler(
             CallbackQueryHandler(self.compras_callback, pattern="^compras:")
@@ -109,29 +121,151 @@ class TelegramBot:
 
         self.app.run_polling()
 
-    async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    def _criar_menu_principal(self):
 
+        botoes = [
+            [
+                InlineKeyboardButton(
+                    "🛒 Registrar compra",
+                    callback_data="menu:compra"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "💳 Minhas contas",
+                    callback_data="menu:contas"
+                ),
+                InlineKeyboardButton(
+                    "📋 Minhas compras",
+                    callback_data="menu:compras"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "📊 Dashboard",
+                    callback_data="menu:dashboard"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "➕ Criar categoria",
+                    callback_data="menu:categoria"
+                ),
+                InlineKeyboardButton(
+                    "❓ Ajuda",
+                    callback_data="menu:help"
+                )
+            ]
+        ]
+
+        return InlineKeyboardMarkup(botoes)
+
+    async def start(self, update, context):
         await update.message.reply_text(
-            """
-*Olá! Eu sou o Pluto.* 🐶
-
-Seu assistente inteligente para organizar e entender seus gastos. 💰
-
-Para começar, é só me contar o que você comprou:
-
-`Comprei uma camisa de corrida por R$ 129,90`
-
-Você também pode *enviar uma foto da sua compra.* 📷
-Eu identifico as informações e peço sua confirmação antes de registrar.
-
-📊 *Quer acompanhar seus gastos de forma visual?*
-Use /dashboard para abrir seu painel.
-
-❓ *Precisa de ajuda?*
-Use /help para ver tudo o que posso fazer.
-""",
+            "👋 *Olá! Eu sou o Pluto.* 🐶\n\n"
+            "Seu assistente inteligente para organizar "
+            "e entender seus gastos. 💰\n\n"
+            "O que você deseja fazer?",
             parse_mode="Markdown",
+            reply_markup=self._criar_menu_principal()
         )
+
+    async def menu(self, update, context):
+        await update.message.reply_text(
+            "🐶 *Menu principal*\n\n"
+            "O que você deseja fazer?",
+            parse_mode="Markdown",
+            reply_markup=self._criar_menu_principal()
+        )
+
+    async def menu_callback(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE
+    ):
+
+        query = update.callback_query
+
+        try:
+            await query.answer()
+        except Exception as e:
+            print(f"Callback expirado ou inválido: {e}")
+            return
+
+        acao = query.data.split(":", 1)[1]
+
+        if acao == "principal":
+
+            await query.edit_message_text(
+                "🐶 *Menu principal*\n\n"
+                "O que você deseja fazer?",
+                parse_mode="Markdown",
+                reply_markup=self._criar_menu_principal()
+            )
+
+        elif acao == "compra":
+
+            botoes = [
+                [
+                    InlineKeyboardButton(
+                        "🐶 Menu principal",
+                        callback_data="menu:principal"
+                    )
+                ]
+            ]
+
+            await query.edit_message_text(
+                "🛒 *Registrar compra*\n\n"
+                "Envie uma mensagem descrevendo sua compra.\n\n"
+                "Exemplo:\n"
+                "`Comprei um tênis por R$ 299,90`\n\n"
+                "Você também pode enviar uma foto da compra 📷.",
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup(botoes)
+            )
+
+        elif acao == "contas":
+
+            await self.listar_contas(update, context)
+
+        elif acao == "compras":
+
+            await self.listar_compras(update, context)
+
+        elif acao == "dashboard":
+
+            usuario_id = update.effective_user.id
+
+            link = gerar_link_login(usuario_id)
+
+            teclado = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton(
+                        "📊 Abrir Dashboard",
+                        url=link
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "🐶 Menu principal",
+                        callback_data="menu:principal"
+                    )
+                ]
+            ])
+
+            await query.edit_message_text(
+                "Clique no botão abaixo para abrir seu dashboard.\n"
+                "Por segurança, o link expira em 5 minutos.",
+                reply_markup=teclado
+            )
+
+        elif acao == "categoria":
+
+            await self.criar_categoria(update, context)
+
+        elif acao == "help":
+
+            await self.help(update, context)
 
     async def abrir_dashboard(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
 
@@ -154,42 +288,61 @@ Use /help para ver tudo o que posso fazer.
 
     async def help(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-        await update.message.reply_text(
-            """
-        *Como posso ajudar?* 🐶
+        mensagem = """
+    *Como posso ajudar?* 🐶
 
-        💰 *Registrar uma compra*
+    💰 *Registrar uma compra*
 
-        Envie uma mensagem contando o que você comprou:
+    Envie uma mensagem contando o que você comprou:
 
-        `Comprei um tênis por R$ 299,90`
+    `Comprei um tênis por R$ 299,90`
 
-        Você também pode enviar uma *foto da compra* 📷 e eu tentarei identificar o produto, categoria e valor.
+    Você também pode enviar uma *foto da compra* 📷.
 
-        🔎 *Confirmar uma compra*
+    📊 *Acompanhar seus gastos*
 
-        Antes de registrar, eu mostro os dados que identifiquei para você confirmar ou escolher outra categoria.
+    Acesse o dashboard para visualizar seu histórico e suas análises.
 
-        📊 *Acompanhar seus gastos*
+    🧠 *Analisar seus hábitos*
 
-        Use /dashboard para abrir seu painel e visualizar seu histórico e suas análises.
+    Conforme você registra suas compras, o Pluto identifica padrões de consumo e gera insights.
 
-        🧠 *Analisar seus hábitos*
+    ⚙️ *Comandos*
 
-        Conforme você registra suas compras, o Pluto identifica padrões de consumo e gera insights sobre seus gastos.
+    /start — Iniciar o Pluto
+    /menu — Abrir o menu
+    /help — Mostrar ajuda
+    /compras — Listar compras
+    /contas — Listar contas
+    /dashboard — Abrir dashboard
+    """
 
-        🔮 *Recomendações*
+        botoes = [
+            [
+                InlineKeyboardButton(
+                    "🐶 Menu principal",
+                    callback_data="menu:principal"
+                )
+            ]
+        ]
 
-        O Pluto pode identificar possíveis compras recorrentes e enviar recomendações personalizadas com base nos seus hábitos.
+        teclado = InlineKeyboardMarkup(botoes)
 
-        ⚙️ *Comandos disponíveis*
+        if update.callback_query:
 
-        /start — Iniciar o Pluto
-        /help — Mostrar esta ajuda
-        /dashboard — Abrir seu dashboard
-            """,
-            parse_mode="Markdown",
-        )
+            await update.callback_query.edit_message_text(
+                mensagem,
+                parse_mode="Markdown",
+                reply_markup=teclado
+            )
+
+        else:
+
+            await update.message.reply_text(
+                mensagem,
+                parse_mode="Markdown",
+                reply_markup=teclado
+            )
 
     async def receber_foto(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
 
@@ -370,19 +523,10 @@ Use /help para ver tudo o que posso fazer.
 
                     if compra is None:
 
-                        botoes = [
-                            [
-                                InlineKeyboardButton(
-                                    "➕ Criar outra conta", callback_data="criar_conta"
-                                )
-                            ]
-                        ]
-
                         await update.message.reply_text(
                             f"✅ Conta *{nome}* criada com sucesso!\n\n"
-                            "O que você deseja fazer agora?",
-                            parse_mode="Markdown",
-                            reply_markup=InlineKeyboardMarkup(botoes),
+                            "Quando quiser continuar, use /menu.",
+                            parse_mode="Markdown"
                         )
 
                         return
@@ -644,9 +788,30 @@ Use /help para ver tudo o que posso fazer.
         compras = service.listar_compras()
 
         if not compras:
-            await update.message.reply_text(
-                "📭 Você ainda não possui compras registradas."
-            )
+
+            mensagem = "📭 Você ainda não possui compras registradas."
+
+            botoes = [
+                [
+                    InlineKeyboardButton(
+                        "🐶 Menu principal",
+                        callback_data="menu:principal"
+                    )
+                ]
+            ]
+
+            teclado = InlineKeyboardMarkup(botoes)
+
+            if update.callback_query:
+                await update.callback_query.edit_message_text(
+                    mensagem,
+                    reply_markup=teclado
+                )
+            else:
+                await update.message.reply_text(
+                    mensagem,
+                    reply_markup=teclado
+                )
 
             return
 
@@ -680,9 +845,18 @@ Use /help para ver tudo o que posso fazer.
 
         teclado = InlineKeyboardMarkup(botoes)
 
-        await update.message.reply_text(
-            mensagem, parse_mode="Markdown", reply_markup=teclado
-        )
+        if update.callback_query:
+            await update.callback_query.edit_message_text(
+                mensagem,
+                parse_mode="Markdown",
+                reply_markup=teclado
+            )
+        else:
+            await update.message.reply_text(
+                mensagem,
+                parse_mode="Markdown",
+                reply_markup=teclado
+            )
 
     def _formatar_compras(self, compras):
 
@@ -1103,11 +1277,21 @@ Use /help para ver tudo o que posso fazer.
 
             context.user_data.pop("categoria_pendente", None)
 
+            botoes = [
+                [
+                    InlineKeyboardButton(
+                        "🐶 Menu principal",
+                        callback_data="menu:principal"
+                    )
+                ]
+            ]
+
             await query.edit_message_text(
                 f"✅ Compra registrada com sucesso!\n\n"
                 f"🛍️ {compra['produto']}\n"
                 f"💰 R$ {compra['valor']:.2f}\n"
-                f"💳 {conta[1]}"
+                f"💳 {conta[1]}",
+                reply_markup=InlineKeyboardMarkup(botoes)
             )
 
         except Exception as e:
@@ -1210,3 +1394,85 @@ Use /help para ver tudo o que posso fazer.
             "Digite o nome da categoria:\n\n"
             "Exemplo: Alimentação"
         )
+
+    async def listar_contas(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE
+    ):
+        usuario_id = update.effective_user.id
+
+        service = CompraService(
+            usuario_id,
+            self.ia_service
+        )
+
+        contas = service.listar_contas()
+
+        if not contas:
+
+            botoes = [
+                [
+                    InlineKeyboardButton(
+                        "➕ Criar conta",
+                        callback_data="criar_conta"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "🐶 Menu principal",
+                        callback_data="menu:principal"
+                    )
+                ]
+            ]
+
+            mensagem = (
+                "💳 *Suas contas*\n\n"
+                "Você ainda não possui nenhuma conta cadastrada."
+            )
+
+        else:
+
+            mensagem = "💳 *Suas contas*\n\n"
+
+            for conta in contas:
+                nome = conta[1]
+                saldo = conta[3]
+
+                mensagem += (
+                    f"💳 *{nome}*\n"
+                    f"💰 Saldo: R$ {saldo:.2f}\n\n"
+                )
+
+            botoes = [
+                [
+                    InlineKeyboardButton(
+                        "➕ Criar conta",
+                        callback_data="criar_conta"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "🐶 Menu principal",
+                        callback_data="menu:principal"
+                    )
+                ]
+            ]
+
+        teclado = InlineKeyboardMarkup(botoes)
+
+        # Veio de um botão do menu
+        if update.callback_query:
+            await update.callback_query.edit_message_text(
+                mensagem,
+                parse_mode="Markdown",
+                reply_markup=teclado
+            )
+
+        # Veio do comando /contas
+        else:
+            await update.message.reply_text(
+                mensagem,
+                parse_mode="Markdown",
+                reply_markup=teclado
+            )

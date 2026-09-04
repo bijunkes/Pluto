@@ -5,97 +5,190 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
+
+/* ============================================================
+   VARIÁVEIS
+   ============================================================ */
+
 :root {
   --bg: #080808;
   --bg-carta: #101210;
   --bg-campo: #161816;
+
   --linha: rgba(255, 255, 255, 0.08);
   --linha-forte: rgba(255, 255, 255, 0.16);
+
   --texto: #f3f5f2;
   --texto-suave: #8b948e;
   --texto-fraco: #565d59;
+
   --verde: #17c93f;
   --verde-forte: #1fe64c;
   --verde-escuro: #0d2213;
   --verde-vidro: rgba(23, 201, 63, 0.14);
+
   --bg-campo-foco: #1a1c1a;
   --chip-texto: #a9f0bb;
   --texto-botao: #06170b;
+
   --vermelho: #f1655f;
-  --sombra-carta: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 14px 34px -22px rgba(0, 0, 0, 0.7);
+
+  --sombra-carta:
+    0 1px 0 rgba(255, 255, 255, 0.03) inset,
+    0 14px 34px -22px rgba(0, 0, 0, 0.7);
 }
 
-* { box-sizing: border-box; }
 
-html { color-scheme: dark; }
+/* ============================================================
+   RESET
+   ============================================================ */
 
-/* ---------- tema claro ---------- */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
 html[data-theme="light"] {
   color-scheme: light;
 
   --bg: #f4f7f4;
   --bg-carta: #ffffff;
   --bg-campo: #f0f3f0;
+
   --linha: rgba(10, 25, 14, 0.10);
   --linha-forte: rgba(10, 25, 14, 0.18);
+
   --texto: #111612;
   --texto-suave: #657068;
   --texto-fraco: #98a19b;
+
   --verde: #11ad35;
   --verde-forte: #0bbd36;
   --verde-escuro: #e8f8ec;
   --verde-vidro: rgba(17, 173, 53, 0.12);
+
   --bg-campo-foco: #ffffff;
   --chip-texto: #087d25;
   --texto-botao: #ffffff;
-  --sombra-carta: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 14px 34px -22px rgba(25, 45, 30, 0.28);
+
+  --sombra-carta:
+    0 1px 0 rgba(255, 255, 255, 0.8) inset,
+    0 14px 34px -22px rgba(25, 45, 30, 0.28);
 }
 
+
+/* ============================================================
+   HIDDEN
+   ============================================================ */
+
+/*
+ * Garante que elementos controlados pelo atributo
+ * HTML "hidden" realmente desapareçam.
+ *
+ * Isso é importante para:
+ * #tela-carregando
+ * #pagina
+ * estados vazios
+ */
+
+[hidden] {
+  display: none !important;
+}
+
+
+/* ============================================================
+   BODY
+   ============================================================ */
 
 body {
   margin: 0;
   min-height: 100vh;
+
   background: var(--bg);
   color: var(--texto);
+
   font-family: 'Inter', system-ui, sans-serif;
+
   -webkit-font-smoothing: antialiased;
+
   position: relative;
+
   overflow-x: hidden;
 }
 
-/* Campo estelar + órbitas — atmosfera de fundo, discreta e fixa */
+
+/* Campo estelar */
+
 body::before {
   content: "";
+
   position: fixed;
   inset: 0;
+
   z-index: -2;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.5) 0.6px, transparent 0.6px);
+
+  background-image:
+    radial-gradient(
+      rgba(255, 255, 255, 0.5) 0.6px,
+      transparent 0.6px
+    );
+
   background-size: 3.4rem 3.4rem;
   background-position: 1.2rem 0.8rem;
+
   opacity: 0.06;
+
   pointer-events: none;
 }
+
+
+/* Órbita */
 
 body::after {
   content: "";
+
   position: fixed;
+
   top: -32rem;
   right: -22rem;
+
   width: 62rem;
   height: 62rem;
+
   z-index: -1;
+
   border-radius: 50%;
+
   border: 1px solid rgba(23, 201, 63, 0.09);
-  box-shadow: 0 0 0 8rem rgba(23, 201, 63, 0.015) inset;
+
+  box-shadow:
+    0 0 0 8rem rgba(23, 201, 63, 0.015) inset;
+
   pointer-events: none;
 }
 
-a { color: inherit; }
+
+a {
+  color: inherit;
+}
+
+
+/* ============================================================
+   TIPOGRAFIA NUMÉRICA
+   ============================================================ */
 
 .numero {
   font-family: 'IBM Plex Mono', ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
 }
+
+
+/* ============================================================
+   FOCO
+   ============================================================ */
 
 :focus-visible {
   outline: 2px solid var(--verde);
@@ -103,433 +196,1042 @@ a { color: inherit; }
   border-radius: 4px;
 }
 
-/* ---------- marca / mascote ---------- */
+
+/* ============================================================
+   MARCA
+   ============================================================ */
 
 .marca {
   display: inline-flex;
+
   align-items: center;
+
   gap: 0.6rem;
+
   font-family: 'Manrope', sans-serif;
+
   font-weight: 800;
+
   font-size: 1.4rem;
+
   letter-spacing: -0.01em;
+
   margin: 0;
+
   color: var(--texto);
 }
 
-.marca span { color: var(--verde); }
+.marca span {
+  color: var(--verde);
+}
+
 
 .marca-selo {
   width: 2.1rem;
   height: 2.1rem;
+
   flex-shrink: 0;
+
   display: grid;
   place-items: center;
+
   border-radius: 50%;
+
   background: var(--verde-escuro);
+
   border: 1px solid rgba(23, 201, 63, 0.4);
-  box-shadow: 0 0 0 5px rgba(23, 201, 63, 0.05);
+
+  box-shadow:
+    0 0 0 5px rgba(23, 201, 63, 0.05);
 }
 
-.marca-selo svg { width: 1.15rem; height: 1.15rem; display: block; }
+
+.marca-selo svg {
+  width: 1.15rem;
+  height: 1.15rem;
+
+  display: block;
+}
+
 
 .marca-tagline {
   font-family: 'Inter', sans-serif;
+
   font-weight: 500;
+
   font-size: 0.72rem;
+
   letter-spacing: 0.03em;
+
   color: var(--texto-suave);
+
   margin: 0.15rem 0 0 2.7rem;
 }
 
-/* ---------- login.html / tela de carregamento ---------- */
+
+/* ============================================================
+   TELA CENTRAL / LOGIN / LOADING
+   ============================================================ */
 
 .tela-central {
   min-height: 100vh;
+
   display: flex;
+
   align-items: center;
   justify-content: center;
+
   padding: 1.5rem;
+
   position: relative;
 }
+
 
 .cartao-login {
   width: 100%;
+
   max-width: 22rem;
+
   background: var(--bg-carta);
+
   border: 1px solid var(--linha);
+
   border-radius: 18px;
+
   padding: 2.6rem 2.2rem 2.4rem;
+
   text-align: center;
+
   box-shadow: var(--sombra-carta);
+
   animation: subir 0.5s ease both;
+
   position: relative;
 }
 
+
 .cartao-login::before {
   content: "";
+
   position: absolute;
+
   inset: -1px;
+
   border-radius: 18px;
+
   padding: 1px;
-  background: linear-gradient(160deg, rgba(23, 201, 63, 0.35), transparent 40%);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+
+  background:
+    linear-gradient(
+      160deg,
+      rgba(23, 201, 63, 0.35),
+      transparent 40%
+    );
+
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+
   -webkit-mask-composite: xor;
+
   mask-composite: exclude;
+
   pointer-events: none;
 }
 
+
 .cartao-login .marca {
   justify-content: center;
+
   margin: 0 auto 1.5rem;
 }
 
+
+/* ============================================================
+   ANIMAÇÕES
+   ============================================================ */
+
 @keyframes subir {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 
 .spinner {
   width: 1.9rem;
   height: 1.9rem;
+
   margin: 0 auto 1.2rem;
+
   border: 2.5px solid var(--linha);
+
   border-top-color: var(--verde);
+
   border-radius: 50%;
-  animation: girar 0.8s linear infinite;
+
+  animation:
+    girar 0.8s linear infinite;
 }
+
 
 @media (prefers-reduced-motion: reduce) {
-  .spinner { animation-duration: 1.6s; }
-  .cartao-login { animation: none; }
+  .spinner {
+    animation-duration: 1.6s;
+  }
+
+  .cartao-login {
+    animation: none;
+  }
 }
 
-@keyframes girar { to { transform: rotate(360deg); } }
 
-.status-texto { color: var(--texto-suave); font-size: 0.9rem; margin: 0; }
+.status-texto {
+  color: var(--texto-suave);
 
-.status-erro { display: none; }
+  font-size: 0.9rem;
+
+  margin: 0;
+}
+
+
+/* ============================================================
+   LOGIN - ERRO
+   ============================================================ */
+
+.status-erro {
+  display: none;
+}
+
 
 .cartao-login.erro .spinner,
-.cartao-login.erro .status-ok { display: none; }
+.cartao-login.erro .status-ok {
+  display: none;
+}
 
-.cartao-login.erro .status-erro { display: block; }
+
+.cartao-login.erro .status-erro {
+  display: block;
+}
+
 
 .cartao-login.erro::before {
-  background: linear-gradient(160deg, rgba(241, 101, 95, 0.35), transparent 40%);
+  background:
+    linear-gradient(
+      160deg,
+      rgba(241, 101, 95, 0.35),
+      transparent 40%
+    );
 }
+
 
 .status-erro strong {
   display: block;
+
   color: var(--vermelho);
+
   font-size: 0.95rem;
+
   margin-bottom: 0.4rem;
 }
 
-.status-erro p { color: var(--texto-suave); font-size: 0.85rem; margin: 0; }
 
-/* ---------- index.html ---------- */
+.status-erro p {
+  color: var(--texto-suave);
+
+  font-size: 0.85rem;
+
+  margin: 0;
+}
+
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
 
 .pagina {
   max-width: 46rem;
+
   margin: 0 auto;
+
   padding: 2.75rem 1.5rem 4.5rem;
+
   position: relative;
 }
+
+
+/* ============================================================
+   HEADER
+   ============================================================ */
 
 .topo {
   display: flex;
+
   align-items: flex-start;
+
   justify-content: space-between;
+
   margin-bottom: 2.25rem;
 }
 
+
+.acoes-topo {
+  display: flex;
+
+  align-items: center;
+
+  gap: 0.55rem;
+}
+
+
+/* ============================================================
+   BOTÃO SAIR
+   ============================================================ */
+
 .sair {
   display: inline-flex;
+
   align-items: center;
+
   gap: 0.4rem;
+
   border: 1px solid var(--linha);
+
   background: transparent;
+
   color: var(--texto-suave);
+
   font: inherit;
+
   font-size: 0.82rem;
+
   font-weight: 500;
+
   cursor: pointer;
+
   border-radius: 999px;
+
   padding: 0.45rem 0.9rem 0.45rem 0.8rem;
+
   margin-top: 0.15rem;
-  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
 }
+
 
 .sair::before {
   content: "";
+
   width: 0.4rem;
   height: 0.4rem;
+
   border-radius: 50%;
+
   background: var(--texto-fraco);
-  transition: background 0.15s ease;
+
+  transition:
+    background 0.15s ease;
 }
+
 
 .sair:hover {
   color: var(--texto);
+
   border-color: var(--linha-forte);
+
   background: rgba(255, 255, 255, 0.03);
 }
 
-.sair:hover::before { background: var(--vermelho); }
+
+.sair:hover::before {
+  background: var(--vermelho);
+}
+
+
+/* ============================================================
+   RESUMO
+   ============================================================ */
 
 .resumo {
   display: grid;
+
   grid-template-columns: 1.5fr 1fr;
+
   gap: 1rem;
+
   margin-bottom: 1.75rem;
 }
 
-@media (max-width: 30rem) {
-  .resumo { grid-template-columns: 1fr; }
-}
 
 .resumo-item {
   background: var(--bg-carta);
+
   border: 1px solid var(--linha);
+
   border-radius: 16px;
+
   padding: 1.5rem 1.6rem;
+
   position: relative;
+
   overflow: hidden;
 }
 
+
 .resumo-item.destaque {
-  background: linear-gradient(155deg, var(--bg-carta) 55%, var(--verde-escuro) 190%);
+  background:
+    linear-gradient(
+      155deg,
+      var(--bg-carta) 55%,
+      var(--verde-escuro) 190%
+    );
 }
+
 
 .resumo-item.destaque::after {
   content: "";
+
   position: absolute;
+
   right: -3.5rem;
   bottom: -3.5rem;
+
   width: 9rem;
   height: 9rem;
+
   border-radius: 50%;
+
   border: 1px solid rgba(23, 201, 63, 0.22);
 }
 
+
 .resumo-item .rotulo {
   font-size: 0.72rem;
+
   font-weight: 600;
+
   text-transform: uppercase;
+
   letter-spacing: 0.08em;
+
   color: var(--texto-suave);
+
   margin: 0 0 0.5rem;
+
   position: relative;
 }
+
 
 .resumo-item .valor {
   font-size: 1.9rem;
+
   font-weight: 500;
+
   margin: 0;
+
   position: relative;
+
   letter-spacing: -0.01em;
 }
 
-.resumo-item.destaque .valor { color: var(--verde-forte); font-size: 2.1rem; }
+
+.resumo-item.destaque .valor {
+  color: var(--verde-forte);
+
+  font-size: 2.1rem;
+}
+
+
+/* ============================================================
+   SEÇÕES
+   ============================================================ */
 
 .secao {
   background: var(--bg-carta);
+
   border: 1px solid var(--linha);
+
   border-radius: 16px;
+
   padding: 1.6rem 1.6rem 1.7rem;
+
   margin-bottom: 1.25rem;
 }
 
+
 .secao h2 {
   display: flex;
+
   align-items: center;
+
   gap: 0.55rem;
+
   font-family: 'Manrope', sans-serif;
+
   font-weight: 700;
+
   font-size: 1rem;
+
   letter-spacing: -0.005em;
+
   margin: 0 0 1.1rem;
+
   color: var(--texto);
 }
 
+
 .secao h2::before {
   content: "";
+
   width: 0.4rem;
   height: 0.4rem;
+
   border-radius: 50%;
+
   background: var(--verde);
-  box-shadow: 0 0 0 3px var(--verde-vidro);
+
+  box-shadow:
+    0 0 0 3px var(--verde-vidro);
+
   flex-shrink: 0;
 }
 
-.recibo { list-style: none; margin: 0; padding: 0; }
+
+/* ============================================================
+   CONTAS
+   ============================================================ */
+
+.contas-lista {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 0.75rem;
+
+  margin-bottom: 1.25rem;
+}
+
+
+.conta-card {
+  background: var(--bg-campo);
+
+  border: 1px solid var(--linha);
+
+  border-radius: 12px;
+
+  padding: 1rem;
+
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+
+.conta-card:hover {
+  border-color: var(--linha-forte);
+
+  transform: translateY(-1px);
+}
+
+
+.conta-card-topo {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 0.5rem;
+
+  margin-bottom: 0.7rem;
+}
+
+
+.conta-icone {
+  font-size: 1.1rem;
+}
+
+
+.conta-tipo {
+  color: var(--texto-suave);
+
+  font-size: 0.7rem;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.05em;
+
+  text-align: right;
+}
+
+
+.conta-card h3 {
+  margin: 0 0 0.4rem;
+
+  font-family: 'Manrope', sans-serif;
+
+  font-size: 0.95rem;
+
+  font-weight: 700;
+}
+
+
+.conta-saldo {
+  margin: 0;
+
+  color: var(--verde-forte);
+
+  font-family: 'IBM Plex Mono', monospace;
+
+  font-size: 1rem;
+
+  font-weight: 500;
+}
+
+
+/* ============================================================
+   COMPRAS
+   ============================================================ */
+
+.recibo {
+  list-style: none;
+
+  margin: 0;
+
+  padding: 0;
+}
+
 
 .recibo li {
   display: flex;
+
   justify-content: space-between;
+
   gap: 1rem;
+
   padding: 0.75rem 0.4rem;
+
   border-bottom: 1px dashed var(--linha);
+
   font-size: 0.9rem;
+
   border-radius: 8px;
-  transition: background 0.15s ease;
+
+  transition:
+    background 0.15s ease;
 }
 
-.recibo li:hover { background: rgba(255, 255, 255, 0.025); }
 
-.recibo li:last-child { border-bottom: none; }
+.recibo li:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
 
-.recibo .produto { font-weight: 500; color: var(--texto); }
+
+.recibo li:last-child {
+  border-bottom: none;
+}
+
+
+.recibo .produto {
+  font-weight: 500;
+
+  color: var(--texto);
+}
+
 
 .recibo .meta {
   color: var(--texto-suave);
+
   font-size: 0.78rem;
+
   display: block;
+
   margin-top: 0.15rem;
 }
 
-.recibo .valor { white-space: nowrap; font-weight: 500; color: var(--texto); }
+
+.recibo .valor {
+  white-space: nowrap;
+
+  font-weight: 500;
+
+  color: var(--texto);
+}
+
+
+/* Compatibilidade com renderização atual */
+
+.compra-item {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 1rem;
+
+  padding: 0.75rem 0.4rem;
+
+  border-bottom: 1px dashed var(--linha);
+
+  border-radius: 8px;
+}
+
+
+.compra-item:last-child {
+  border-bottom: none;
+}
+
+
+.compra-info {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 0.15rem;
+
+  min-width: 0;
+}
+
+
+.compra-info strong {
+  font-size: 0.9rem;
+}
+
+
+.compra-info span {
+  color: var(--texto-suave);
+
+  font-size: 0.78rem;
+}
+
+
+.compra-valor {
+  white-space: nowrap;
+
+  font-family: 'IBM Plex Mono', monospace;
+
+  font-size: 0.88rem;
+}
+
+
+/* ============================================================
+   ESTADO VAZIO
+   ============================================================ */
 
 .vazio {
   color: var(--texto-suave);
+
   font-size: 0.88rem;
+
   text-align: center;
+
   padding: 1.75rem 1rem 1.25rem;
 }
 
+
+/* ============================================================
+   FORMULÁRIOS
+   ============================================================ */
+
 .form-linha {
   display: grid;
-  grid-template-columns: 2fr 1.3fr 1fr auto;
+
+  grid-template-columns:
+    2fr 1.3fr 1fr auto;
+
   gap: 0.6rem;
 }
 
-@media (max-width: 30rem) {
-  .form-linha { grid-template-columns: 1fr; }
-}
 
 .form-linha input,
 .form-linha select {
   font: inherit;
+
   padding: 0.65rem 0.8rem;
+
   border: 1px solid var(--linha);
+
   border-radius: 10px;
+
   background: var(--bg-campo);
+
   color: var(--texto);
-  transition: border-color 0.15s ease, background 0.15s ease;
+
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 
-.form-linha input::placeholder { color: var(--texto-fraco); }
+
+.form-linha input::placeholder {
+  color: var(--texto-fraco);
+}
+
 
 .form-linha input:focus,
 .form-linha select:focus {
   background: var(--bg-campo-foco);
+
   border-color: rgba(23, 201, 63, 0.5);
 }
+
 
 .form-linha select {
   color-scheme: dark;
 }
 
+
+/* ============================================================
+   BOTÕES
+   ============================================================ */
+
 .botao {
   font: inherit;
+
   font-weight: 600;
+
   font-size: 0.9rem;
+
   padding: 0.65rem 1.15rem;
+
   border: none;
+
   border-radius: 10px;
+
   background: var(--verde);
+
   color: var(--texto-botao);
+
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease,
+    box-shadow 0.15s ease;
 }
+
 
 .botao:hover {
   background: var(--verde-forte);
-  box-shadow: 0 0 0 4px var(--verde-vidro);
+
+  box-shadow:
+    0 0 0 4px var(--verde-vidro);
 }
 
-.botao:active { transform: translateY(1px); }
+
+.botao:active {
+  transform: translateY(1px);
+}
+
+
+/* ============================================================
+   ERROS DOS FORMULÁRIOS
+   ============================================================ */
 
 .form-erro {
   color: var(--vermelho);
+
   font-size: 0.82rem;
+
   margin: 0.7rem 0 0;
+
   min-height: 1.1em;
 }
 
+
+/* ============================================================
+   CATEGORIAS
+   ============================================================ */
+
 .categorias-lista {
   display: flex;
+
   flex-wrap: wrap;
+
   gap: 0.5rem;
+
   margin-bottom: 1.1rem;
 }
 
+
+/*
+ * Seu JavaScript usa "categoria-item".
+ * Mantemos também "categoria-chip" caso queira
+ * utilizar essa classe futuramente.
+ */
+
+.categoria-item,
 .categoria-chip {
   font-size: 0.8rem;
+
   font-weight: 500;
+
   padding: 0.35rem 0.75rem;
+
   border-radius: 999px;
+
   background: var(--verde-escuro);
+
   color: var(--chip-texto);
+
   border: 1px solid rgba(23, 201, 63, 0.3);
 }
 
+
 .form-categoria {
   display: flex;
+
   gap: 0.6rem;
 }
 
-.form-categoria input { flex: 1; }
 
-/* ---------- alternador de tema ---------- */
-.acoes-topo {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
+.form-categoria input {
+  flex: 1;
 }
+
+
+/* ============================================================
+   ALTERNADOR DE TEMA
+   ============================================================ */
 
 .tema-toggle {
   width: 2.35rem;
   height: 2.35rem;
+
   display: grid;
+
   place-items: center;
+
   border: 1px solid var(--linha);
+
   border-radius: 50%;
+
   background: var(--bg-carta);
+
   color: var(--texto-suave);
+
   font: inherit;
+
   font-size: 1rem;
+
   cursor: pointer;
-  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
 }
+
 
 .tema-toggle:hover {
   color: var(--verde);
+
   border-color: rgba(23, 201, 63, 0.35);
+
   background: var(--verde-vidro);
+
   transform: translateY(-1px);
 }
 
-.tema-toggle:active { transform: translateY(0); }
+
+.tema-toggle:active {
+  transform: translateY(0);
+}
+
 
 .tema-toggle .icone-tema {
   line-height: 1;
-  transition: transform 0.25s ease;
+
+  transition:
+    transform 0.25s ease;
 }
 
-.tema-toggle:hover .icone-tema { transform: rotate(12deg); }
+
+.tema-toggle:hover .icone-tema {
+  transform: rotate(12deg);
+}
+
+
+/* ============================================================
+   TEMA CLARO
+   ============================================================ */
 
 html[data-theme="light"] body::before {
   opacity: 0.035;
 }
 
+
 html[data-theme="light"] body::after {
   border-color: rgba(17, 173, 53, 0.10);
-  box-shadow: 0 0 0 8rem rgba(17, 173, 53, 0.018) inset;
+
+  box-shadow:
+    0 0 0 8rem rgba(17, 173, 53, 0.018) inset;
 }
 
+
+/* ============================================================
+   RESPONSIVIDADE
+   ============================================================ */
+
 @media (max-width: 30rem) {
-  .acoes-topo { gap: 0.4rem; }
-  .tema-toggle { width: 2.25rem; height: 2.25rem; }
+
+  .pagina {
+    padding:
+      2rem 1rem 3rem;
+  }
+
+
+  .resumo {
+    grid-template-columns: 1fr;
+  }
+
+
+  .contas-lista {
+    grid-template-columns: 1fr;
+  }
+
+
+  .form-linha {
+    grid-template-columns: 1fr;
+  }
+
+
+  .form-categoria {
+    flex-direction: column;
+  }
+
+
+  .acoes-topo {
+    gap: 0.4rem;
+  }
+
+
+  .tema-toggle {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+
+  .topo {
+    align-items: center;
+  }
 }
