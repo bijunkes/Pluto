@@ -63,17 +63,22 @@ class GeminiService:
 
         contents = []
 
-        ### Se houver uma imagem (ex: foto de recibo), adiciona na chamada
-
         if imagem_path:
             try:
                 with open(imagem_path, "rb") as f:
                     imagem = f.read()
+
                 contents.append(
-                    types.Part.from_bytes(data=imagem, mime_type="image/jpeg")
+                    types.Part.from_bytes(
+                        data=imagem,
+                        mime_type="image/jpeg"
+                    )
                 )
+
             except Exception as e:
-                raise AnaliseIAError(f"Erro ao ler a imagem enviada: {str(e)}")
+                raise AnaliseIAError(
+                    f"Erro ao ler a imagem enviada: {str(e)}"
+                )
 
         contents.append(prompt)
 
@@ -97,7 +102,11 @@ class GeminiService:
                                     "categoria": types.Schema(type="STRING"),
                                     "valor": types.Schema(type="NUMBER"),
                                 },
-                                required=["produto", "categoria", "valor"],
+                                required=[
+                                    "produto",
+                                    "categoria",
+                                    "valor"
+                                ],
                             ),
                         ),
                     )
@@ -108,8 +117,11 @@ class GeminiService:
 
                     erro = str(e)
 
-                    # Só tenta novamente em erros temporários
-                    if "503" in erro or "UNAVAILABLE" in erro or "high demand" in erro:
+                    if (
+                        "503" in erro
+                        or "UNAVAILABLE" in erro
+                        or "high demand" in erro
+                    ):
 
                         if tentativa < max_tentativas - 1:
 
@@ -125,11 +137,71 @@ class GeminiService:
 
                             continue
 
-                    # Outros erros não devem ser repetidos
                     raise
+
+            resultado = extrair_json(response.text)
+
+            validar_resultado_compra(
+                resultado,
+                self.categorias
+            )
+
+            return resultado
 
         except Exception as e:
 
             raise AnaliseIAError(
-                f"Não foi possível se comunicar com o Gemini. " f"Detalhes: {str(e)}"
+                "Não foi possível se comunicar com o Gemini. "
+                f"Detalhes: {str(e)}"
+            ) from e
+
+    def gerar_insight(self, dados):
+        """
+        Gera um insight financeiro a partir dos dados
+        previamente calculados pelo InsightService.
+        """
+
+        prompt = f"""
+Você é o assistente financeiro do Pluto.
+
+Sua função é transformar dados financeiros já calculados
+pelo sistema em um insight curto, útil e amigável.
+
+Dados da análise:
+
+{json.dumps(dados, ensure_ascii=False, indent=2)}
+
+Regras:
+
+1. Use SOMENTE os dados fornecidos.
+2. Não invente valores, categorias ou informações.
+3. Não faça cálculos diferentes dos dados fornecidos.
+4. Não dê diagnósticos financeiros.
+5. Não seja julgador ou alarmista.
+6. Seja objetivo e natural.
+7. Destaque apenas os padrões mais relevantes.
+8. Gere no máximo 2 insights.
+9. Se não houver um padrão relevante, informe isso de forma simples.
+10. Os valores devem ser apresentados em reais brasileiros.
+11. Não mencione que você é uma IA.
+12. Não use Markdown complexo.
+13. O resultado deve ser apenas o texto que será enviado ao usuário.
+
+Escreva o insight em português do Brasil.
+"""
+
+        try:
+
+            response = self.client.models.generate_content(
+                model="gemini-3.6-flash",
+                contents=prompt,
+            )
+
+            return response.text.strip()
+
+        except Exception as e:
+
+            raise AnaliseIAError(
+                "Não foi possível gerar o insight pelo Gemini. "
+                f"Detalhes: {str(e)}"
             ) from e

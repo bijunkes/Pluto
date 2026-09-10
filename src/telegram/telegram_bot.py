@@ -21,6 +21,8 @@ from src.services.auth_service import gerar_link_login
 
 from datetime import datetime, timedelta
 
+from src.services.scheduler_service import SchedulerService
+
 
 class TelegramBot:
 
@@ -32,6 +34,9 @@ class TelegramBot:
 
         # Serviço de IA com failover entre Gemini e Groq
         self.ia_service = IAService()
+
+        # Scheduler dos insights automáticos
+        self.scheduler_service = SchedulerService(self.ia_service)
 
         # Aplicação do Telegram
         self.app = Application.builder().token(self.token).build()
@@ -119,7 +124,16 @@ class TelegramBot:
     def iniciar(self):
         print("Pluto Telegram iniciado!")
 
+        # Executa a verificação dos insights
+        # periodicamente.
+        self.app.job_queue.run_repeating(
+            self._executar_scheduler,
+            interval=60,
+            first=10,
+        )
+
         self.app.run_polling()
+
 
     def _criar_menu_principal(self):
 
@@ -688,7 +702,10 @@ class TelegramBot:
 
         except Exception as e:
 
+            import traceback
+
             print(f"Erro ao analisar compra: {e}")
+            traceback.print_exc()
 
             await update.message.reply_text(
                 "Não consegui analisar a compra agora. "
@@ -1475,4 +1492,54 @@ class TelegramBot:
                 mensagem,
                 parse_mode="Markdown",
                 reply_markup=teclado
+            )
+
+    async def _enviar_insight(self, telegram_id, mensagem):
+        """
+        Envia um insight automático para um usuário do Telegram.
+        """
+
+        await self.app.bot.send_message(
+            chat_id=telegram_id,
+            text=(
+                "🐶 *Insight do Pluto* 🧠\n\n"
+                f"{mensagem}"
+            ),
+            parse_mode="Markdown",
+        )
+
+    async def _executar_scheduler(
+        self,
+        context: ContextTypes.DEFAULT_TYPE
+    ):
+        """
+        Executa a verificação dos insights automáticos.
+        """
+
+        print("[SCHEDULER] Verificando insights...")
+
+        try:
+
+            resultados = await self.scheduler_service.processar_insights(
+                self._enviar_insight
+            )
+
+            if resultados:
+
+                print(
+                    f"[SCHEDULER] {len(resultados)} "
+                    "usuário(s) processado(s)."
+                )
+
+            else:
+
+                print(
+                    "[SCHEDULER] Nenhum usuário precisa "
+                    "receber insight agora."
+                )
+
+        except Exception as erro:
+
+            print(
+                f"[SCHEDULER] Erro geral: {erro}"
             )

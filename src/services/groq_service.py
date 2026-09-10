@@ -1,4 +1,5 @@
 import os
+import json
 
 from dotenv import load_dotenv
 from groq import Groq
@@ -86,4 +87,61 @@ Retorne SOMENTE um JSON válido neste formato:
 
             raise AnaliseIAError(
                 "Não foi possível se comunicar " f"com o Groq. Detalhes: {str(e)}"
+            ) from e
+
+    def gerar_insight(self, dados):
+        """
+        Gera um insight financeiro a partir dos dados
+        previamente calculados pelo InsightService.
+        """
+
+        prompt = f"""
+Você é o assistente financeiro do Pluto.
+
+Sua função é transformar dados financeiros já calculados
+pelo sistema em um insight curto, útil e amigável.
+
+Dados da análise:
+
+{json.dumps(dados, ensure_ascii=False, indent=2)}
+
+Regras:
+
+1. Use SOMENTE os dados fornecidos.
+2. Não invente valores, categorias ou informações.
+3. Não faça cálculos diferentes dos dados fornecidos.
+4. Não dê diagnósticos financeiros.
+5. Não seja julgador ou alarmista.
+6. Seja objetivo e natural.
+7. Destaque apenas os padrões mais relevantes.
+8. Gere no máximo 2 insights.
+9. Se não houver um padrão relevante, informe isso de forma simples.
+10. Os valores devem ser apresentados em reais brasileiros.
+11. Não mencione que você é uma IA.
+12. Não use Markdown complexo.
+13. O resultado deve ser apenas o texto que será enviado ao usuário.
+
+Escreva o insight em português do Brasil.
+"""
+
+        try:
+
+            response = self.client.chat.completions.create(
+                model="openai/gpt-oss-20b",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt,
+                    }
+                ],
+                temperature=0.3,
+            )
+
+            return response.choices[0].message.content.strip()
+
+        except Exception as e:
+
+            raise AnaliseIAError(
+                "Não foi possível gerar o insight pelo Groq. "
+                f"Detalhes: {str(e)}"
             ) from e

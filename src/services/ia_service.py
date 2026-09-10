@@ -120,3 +120,42 @@ class IAService:
             raise AnaliseIAError(
                 "Não foi possível analisar a compra " "nem pelo Gemini nem pelo Groq."
             ) from e
+
+    def gerar_insight(self, dados):
+        """
+        Gera um insight financeiro utilizando o Gemini
+        e utiliza o Groq como fallback.
+        """
+
+        try:
+
+            print("[IA] Gerando insight pelo Gemini...")
+
+            return self.gemini.gerar_insight(dados)
+
+        except AnaliseIAError as e:
+
+            print(f"[IA] Gemini falhou ao gerar insight: {e}")
+
+        # =====================================================
+        # FAILOVER → GROQ
+        # =====================================================
+
+        print("[IA] Ativando Groq como fallback para insight...")
+
+        try:
+
+            resultado = self.groq.gerar_insight(dados)
+
+            print("[IA] Insight gerado com sucesso pelo Groq.")
+
+            return resultado
+
+        except AnaliseIAError as e:
+
+            print(f"[IA] Groq também falhou ao gerar insight: {e}")
+
+            raise AnaliseIAError(
+                "Não foi possível gerar o insight "
+                "nem pelo Gemini nem pelo Groq."
+            ) from e

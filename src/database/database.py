@@ -604,3 +604,303 @@ class Database:
                     """,
                     (valor, conta_id, self.usuario_id),
                 )
+
+    # =========================================================
+    # INSIGHTS
+    # =========================================================
+
+    def criar_configuracao_insights(self):
+        """
+        Cria a configuração padrão de insights para o usuário.
+
+        Por padrão:
+        - insights ativados
+        - frequência semanal
+        - horário às 09:00
+        - nenhum envio realizado ainda
+        """
+
+        with self.conectar() as conn:
+
+            with conn.cursor() as cursor:
+
+                cursor.execute(
+                    """
+                    INSERT INTO configuracoes_insights (
+                        telegram_id
+                    )
+                    VALUES (%s)
+                    ON CONFLICT (telegram_id) DO NOTHING
+                    RETURNING id
+                    """,
+                    (self.usuario_id,),
+                )
+
+                resultado = cursor.fetchone()
+
+                return resultado[0] if resultado else None
+
+    def buscar_configuracao_insights(self):
+        """
+        Retorna a configuração de insights do usuário.
+
+        Se ainda não existir, cria a configuração padrão.
+        """
+
+        self.criar_configuracao_insights()
+
+        with self.conectar() as conn:
+
+            with conn.cursor() as cursor:
+
+                cursor.execute(
+                    """
+                    SELECT
+                        id,
+                        telegram_id,
+                        ativo,
+                        frequencia,
+                        horario,
+                        ultimo_envio
+                    FROM configuracoes_insights
+                    WHERE telegram_id = %s
+                    """,
+                    (self.usuario_id,),
+                )
+
+                resultado = cursor.fetchone()
+
+                if resultado is None:
+                    return None
+
+                return {
+                    "id": resultado[0],
+                    "telegram_id": resultado[1],
+                    "ativo": resultado[2],
+                    "frequencia": resultado[3],
+                    "horario": resultado[4],
+                    "ultimo_envio": resultado[5],
+                }
+
+    def atualizar_frequencia_insights(self, frequencia):
+        """
+        Atualiza a frequência dos insights.
+
+        Valores permitidos:
+        DIARIO
+        SEMANAL
+        NENHUM
+        """
+
+        frequencia = frequencia.strip().upper()
+
+        frequencias_validas = {
+            "DIARIO",
+            "SEMANAL",
+            "NENHUM",
+        }
+
+        if frequencia not in frequencias_validas:
+            raise ValueError(
+                "Frequência inválida. "
+                "Use DIARIO, SEMANAL ou NENHUM."
+            )
+
+        self.criar_configuracao_insights()
+
+        with self.conectar() as conn:
+
+            with conn.cursor() as cursor:
+
+                cursor.execute(
+                    """
+                    UPDATE configuracoes_insights
+                    SET
+                        frequencia = %s,
+                        ativo = %s
+                    WHERE telegram_id = %s
+                    """,
+                    (
+                        frequencia,
+                        frequencia != "NENHUM",
+                        self.usuario_id,
+                    ),
+                )
+
+    def atualizar_horario_insights(self, horario):
+        """
+        Atualiza o horário preferido para receber insights.
+
+        O horário deve ser informado no formato HH:MM.
+        """
+
+        self.criar_configuracao_insights()
+
+        with self.conectar() as conn:
+
+            with conn.cursor() as cursor:
+
+                cursor.execute(
+                    """
+                    UPDATE configuracoes_insights
+                    SET horario = %s
+                    WHERE telegram_id = %s
+                    """,
+                    (
+                        horario,
+                        self.usuario_id,
+                    ),
+                )
+
+    def definir_insights_ativos(self, ativo):
+        """
+        Ativa ou desativa o recebimento de insights.
+        """
+
+        self.criar_configuracao_insights()
+
+        with self.conectar() as conn:
+
+            with conn.cursor() as cursor:
+
+                cursor.execute(
+                    """
+                    UPDATE configuracoes_insights
+                    SET ativo = %s
+                    WHERE telegram_id = %s
+                    """,
+                    (
+                        ativo,
+                        self.usuario_id,
+                    ),
+                )
+
+    def registrar_envio_insight(self):
+        """
+        Registra o momento do último insight enviado.
+        """
+
+        with self.conectar() as conn:
+
+            with conn.cursor() as cursor:
+
+                cursor.execute(
+                    """
+                    UPDATE configuracoes_insights
+                    SET ultimo_envio = CURRENT_TIMESTAMP
+                    WHERE telegram_id = %s
+                    """,
+                    (self.usuario_id,),
+                )
+
+    def total_gastos_periodo(self, data_inicio, data_fim):
+        """
+        Retorna o total de gastos do usuário em um período.
+        """
+
+        with self.conectar() as conn:
+
+            with conn.cursor() as cursor:
+
+                cursor.execute(
+                    """
+                    SELECT COALESCE(SUM(valor), 0)
+                    FROM compras
+                    WHERE telegram_id = %s
+                    AND data >= %s
+                    AND data < %s
+                    """,
+                    (
+                        self.usuario_id,
+                        data_inicio,
+                        data_fim,
+                    ),
+                )
+
+                resultado = cursor.fetchone()
+
+                return float(resultado[0])
+
+    def gastos_por_categoria(self, data_inicio, data_fim):
+        """
+        Retorna os gastos agrupados por categoria
+        dentro de um período.
+        """
+
+        with self.conectar() as conn:
+
+            with conn.cursor() as cursor:
+
+                cursor.execute(
+                    """
+                    SELECT
+                        categorias.nome,
+                        COALESCE(SUM(compras.valor), 0),
+                        COUNT(compras.id)
+                    FROM compras
+
+                    JOIN categorias
+                        ON compras.categoria_id = categorias.id
+
+                    WHERE compras.telegram_id = %s
+                    AND compras.data >= %s
+                    AND compras.data < %s
+
+                    GROUP BY
+                        categorias.id,
+                        categorias.nome
+
+                    ORDER BY
+                        SUM(compras.valor) DESC
+                    """,
+                    (
+                        self.usuario_id,
+                        data_inicio,
+                        data_fim,
+                    ),
+                )
+
+                resultados = cursor.fetchall()
+
+                return [
+                    {
+                        "categoria": resultado[0],
+                        "total": float(resultado[1]),
+                        "quantidade": resultado[2],
+                    }
+                    for resultado in resultados
+                ]
+
+    def listar_configuracoes_insights_ativas(self):
+        """
+        Retorna as configurações de insights dos usuários ativos.
+        """
+
+        with self.conectar() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT
+                        telegram_id,
+                        ativo,
+                        frequencia,
+                        horario,
+                        ultimo_envio
+                    FROM configuracoes_insights
+                    WHERE ativo = TRUE
+                    AND frequencia != 'NENHUM'
+                    """
+                )
+
+                resultados = cursor.fetchall()
+
+                return [
+                    {
+                        "telegram_id": resultado[0],
+                        "ativo": resultado[1],
+                        "frequencia": resultado[2],
+                        "horario": resultado[3],
+                        "ultimo_envio": resultado[4],
+                    }
+                    for resultado in resultados
+                ]
