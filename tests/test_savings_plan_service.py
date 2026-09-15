@@ -45,6 +45,7 @@ class FakeMessage:
 class FakeUpdate:
     def __init__(self):
         self.message = FakeMessage()
+        self.callback_query = None
 
 
 class FakeContext:
@@ -82,3 +83,14 @@ def test_menu_principal_oferece_conversa_com_pluto():
         for botao in linha
     ]
     assert "menu:conversa" in callbacks
+
+
+def test_criar_conta_tambem_funciona_por_mensagem():
+    bot = TelegramBot.__new__(TelegramBot)
+    update = FakeUpdate()
+    context = FakeContext()
+
+    asyncio.run(bot.criar_conta(update, context))
+
+    assert context.user_data["criando_conta"] is True
+    assert "Digite o nome da conta" in update.message.respostas[-1]

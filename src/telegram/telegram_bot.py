@@ -503,10 +503,14 @@ class TelegramBot:
                 self.financial_context_service.obter, usuario_id
             )
             dados["perfil_declarado"] = context.user_data.get("perfil_financeiro", {})
+            skills_conversa = tuple(
+                skill for skill in self.skill_router.skills
+                if skill.info.nome != "registrar_compra"
+            )
             interpretacao = await asyncio.to_thread(
                 self.conversation_service.interpretar,
                 texto,
-                (),
+                skills_conversa,
                 usuario_id,
                 dados,
                 historico,
@@ -514,6 +518,17 @@ class TelegramBot:
             resposta = interpretacao["resposta"] or (
                 "Não consegui formular uma resposta. Tente perguntar de outra forma."
             )
+
+            nome_skill = interpretacao["skill"]
+            if nome_skill:
+                skill = next(
+                    (item for item in skills_conversa if item.info.nome == nome_skill),
+                    None,
+                )
+                if skill is not None:
+                    context.user_data.pop("modo_conversa", None)
+                    await skill.executar(self, update, context)
+                    return
         except Exception as erro:
             print(f"Erro na conversa financeira: {erro}")
             await update.message.reply_text(
@@ -589,6 +604,10 @@ class TelegramBot:
         if context.user_data.get("modo_conversa"):
             if "entrevista_financeira" in context.user_data:
                 await self._continuar_entrevista_financeira(update, context, texto)
+                return
+            if skill_direta and skill_direta.info.nome != "registrar_compra":
+                context.user_data.pop("modo_conversa", None)
+                await skill_direta.executar(self, update, context)
                 return
             await self._responder_conversa_financeira(update, context, texto)
             return
@@ -1100,9 +1119,10 @@ class TelegramBot:
     async def compras_callback(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
     ):
-        query = update.callback_query
+        query = getattr(update, "callback_query", None)
 
-        await query.answer()
+        if query:
+            await query.answer()
 
         acao = query.data.split(":", 1)[1]
 
@@ -1510,7 +1530,8 @@ class TelegramBot:
 
         query = update.callback_query
 
-        await query.answer()
+        if query:
+            await query.answer()
 
         context.user_data["criando_conta"] = True
         context.user_data["etapa_criacao_conta"] = None
@@ -1519,11 +1540,15 @@ class TelegramBot:
 
         context.user_data.pop("tipo_conta_pendente", None)
 
-        await query.edit_message_text(
+        mensagem = (
             "💳 Vamos criar uma nova conta.\n\n"
             "Digite o nome da conta:\n\n"
             "Exemplo: Nubank"
         )
+        if query:
+            await query.edit_message_text(mensagem)
+        else:
+            await update.message.reply_text(mensagem)
 
     async def selecionar_tipo_conta(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -1586,17 +1611,22 @@ class TelegramBot:
         Inicia o processo de criação de uma nova categoria.
         """
 
-        query = update.callback_query
+        query = getattr(update, "callback_query", None)
 
-        await query.answer()
+        if query:
+            await query.answer()
 
         context.user_data["criando_categoria"] = True
 
-        await query.edit_message_text(
+        mensagem = (
             "🏷️ Vamos criar uma nova categoria.\n\n"
             "Digite o nome da categoria:\n\n"
             "Exemplo: Alimentação"
         )
+        if query:
+            await query.edit_message_text(mensagem)
+        else:
+            await update.message.reply_text(mensagem)
 
     async def listar_contas(
         self,
