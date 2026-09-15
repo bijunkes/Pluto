@@ -69,3 +69,16 @@ def test_fluxo_pergunta_salario_e_entrega_plano():
     assert "R$ 900,00" in resposta
     assert "R$ 600,00" in resposta
     assert "planejamento_economia" not in context.user_data
+
+
+def test_menu_principal_oferece_conversa_com_pluto():
+    bot = TelegramBot.__new__(TelegramBot)
+
+    menu = bot._criar_menu_principal()
+
+    callbacks = [
+        botao.callback_data
+        for linha in menu.inline_keyboard
+        for botao in linha
+    ]
+    assert "menu:conversa" in callbacks

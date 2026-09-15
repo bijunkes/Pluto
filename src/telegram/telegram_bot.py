@@ -23,10 +23,18 @@ from datetime import datetime, timedelta
 
 from src.services.scheduler_service import SchedulerService
 from src.services.savings_plan_service import SavingsPlanService
+from src.services.conversation_service import ConversationService
+from src.services.financial_context_service import FinancialContextService
 from src.telegram.skills import SkillRouter
 
 
 class TelegramBot:
+
+    PERGUNTAS_ENTREVISTA = (
+        "1/3 — Qual é o seu principal objetivo financeiro neste momento?",
+        "2/3 — Como você descreveria sua renda, seus gastos mensais e eventuais dívidas?",
+        "3/3 — Quanto você já conhece sobre finanças e investimentos, e como lida com riscos?",
+    )
 
     def __init__(self):
 
@@ -42,6 +50,8 @@ class TelegramBot:
 
         # Seleciona ações do bot a partir de frases em linguagem natural.
         self.skill_router = SkillRouter()
+        self.conversation_service = None
+        self.financial_context_service = FinancialContextService()
 
         # Aplicação do Telegram
         self.app = Application.builder().token(self.token).build()
@@ -167,6 +177,12 @@ class TelegramBot:
             ],
             [
                 InlineKeyboardButton(
+                    "💬 Falar com o Pluto",
+                    callback_data="menu:conversa"
+                )
+            ],
+            [
+                InlineKeyboardButton(
                     "➕ Criar categoria",
                     callback_data="menu:categoria"
                 ),
@@ -181,6 +197,8 @@ class TelegramBot:
 
     async def start(self, update, context):
         context.user_data.pop("planejamento_economia", None)
+        context.user_data.pop("modo_conversa", None)
+        context.user_data.pop("entrevista_financeira", None)
         await update.message.reply_text(
             "👋 *Olá! Eu sou o Pluto.* 🐶\n\n"
             "Seu assistente inteligente para organizar "
@@ -192,6 +210,8 @@ class TelegramBot:
 
     async def menu(self, update, context):
         context.user_data.pop("planejamento_economia", None)
+        context.user_data.pop("modo_conversa", None)
+        context.user_data.pop("entrevista_financeira", None)
         await update.message.reply_text(
             "🐶 *Menu principal*\n\n"
             "O que você deseja fazer?",
@@ -218,6 +238,8 @@ class TelegramBot:
         if acao == "principal":
 
             context.user_data.pop("planejamento_economia", None)
+            context.user_data.pop("modo_conversa", None)
+            context.user_data.pop("entrevista_financeira", None)
 
             await query.edit_message_text(
                 "🐶 *Menu principal*\n\n"
@@ -285,6 +307,10 @@ class TelegramBot:
         elif acao == "categoria":
 
             await self.criar_categoria(update, context)
+
+        elif acao == "conversa":
+
+            await self._iniciar_conversa_financeira(update, context)
 
         elif acao == "help":
 
@@ -415,6 +441,94 @@ class TelegramBot:
 
         await self._enviar_confirmacao(update, context, resultado)
 
+    async def _iniciar_conversa_financeira(self, update, context):
+        context.user_data["modo_conversa"] = True
+        perfil = context.user_data.get("perfil_financeiro")
+
+        if perfil:
+            texto = (
+                "💬 *Conversa com o Pluto*\n\n"
+                "Pode perguntar sobre orçamento, dívidas, economia ou investimentos."
+            )
+        else:
+            context.user_data["entrevista_financeira"] = {
+                "indice": 0,
+                "respostas": [],
+            }
+            texto = (
+                "💬 *Antes de começarmos, quero conhecer você um pouco.*\n\n"
+                + self.PERGUNTAS_ENTREVISTA[0]
+            )
+
+        await update.callback_query.edit_message_text(
+            texto,
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🐶 Voltar ao menu", callback_data="menu:principal")
+            ]]),
+        )
+
+    async def _continuar_entrevista_financeira(self, update, context, texto):
+        entrevista = context.user_data["entrevista_financeira"]
+        entrevista["respostas"].append(texto)
+        entrevista["indice"] += 1
+
+        if entrevista["indice"] < len(self.PERGUNTAS_ENTREVISTA):
+            await update.message.reply_text(
+                self.PERGUNTAS_ENTREVISTA[entrevista["indice"]]
+            )
+            return
+
+        respostas = entrevista["respostas"]
+        context.user_data["perfil_financeiro"] = {
+            "objetivo": respostas[0],
+            "situacao": respostas[1],
+            "conhecimento_e_risco": respostas[2],
+        }
+        context.user_data.pop("entrevista_financeira", None)
+        await update.message.reply_text(
+            "Perfeito, já tenho uma base para adaptar nossa conversa. 🐶\n\n"
+            "Agora me diga: sobre qual assunto financeiro você quer conversar?"
+        )
+
+    async def _responder_conversa_financeira(self, update, context, texto):
+        usuario_id = update.effective_user.id
+        historico = context.user_data.get("historico_assistente", [])
+
+        try:
+            if self.conversation_service is None:
+                self.conversation_service = ConversationService()
+
+            dados = await asyncio.to_thread(
+                self.financial_context_service.obter, usuario_id
+            )
+            dados["perfil_declarado"] = context.user_data.get("perfil_financeiro", {})
+            interpretacao = await asyncio.to_thread(
+                self.conversation_service.interpretar,
+                texto,
+                (),
+                usuario_id,
+                dados,
+                historico,
+            )
+            resposta = interpretacao["resposta"] or (
+                "Não consegui formular uma resposta. Tente perguntar de outra forma."
+            )
+        except Exception as erro:
+            print(f"Erro na conversa financeira: {erro}")
+            await update.message.reply_text(
+                "Não consegui responder agora. Verifique a configuração da conversa "
+                "e tente novamente em alguns instantes."
+            )
+            return
+
+        await update.message.reply_text(resposta)
+        historico.extend([
+            {"role": "user", "content": texto},
+            {"role": "assistant", "content": resposta},
+        ])
+        context.user_data["historico_assistente"] = historico[-12:]
+
     async def iniciar_planejamento_economia(self, update, context):
         context.user_data["planejamento_economia"] = True
         await update.message.reply_text(
@@ -465,6 +579,18 @@ class TelegramBot:
 
         if context.user_data.get("planejamento_economia"):
             await self._continuar_planejamento_economia(update, context, texto)
+            return
+
+        skill_direta = self.skill_router.selecionar(texto)
+        if skill_direta and skill_direta.info.nome == "planejar_economia":
+            await skill_direta.executar(self, update, context)
+            return
+
+        if context.user_data.get("modo_conversa"):
+            if "entrevista_financeira" in context.user_data:
+                await self._continuar_entrevista_financeira(update, context, texto)
+                return
+            await self._responder_conversa_financeira(update, context, texto)
             return
 
         # =====================================================
