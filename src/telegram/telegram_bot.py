@@ -22,6 +22,8 @@ from src.services.auth_service import gerar_link_login
 from datetime import datetime, timedelta
 
 from src.services.scheduler_service import SchedulerService
+from src.services.savings_plan_service import SavingsPlanService
+from src.telegram.skills import SkillRouter
 
 
 class TelegramBot:
@@ -37,6 +39,9 @@ class TelegramBot:
 
         # Scheduler dos insights automáticos
         self.scheduler_service = SchedulerService(self.ia_service)
+
+        # Seleciona ações do bot a partir de frases em linguagem natural.
+        self.skill_router = SkillRouter()
 
         # Aplicação do Telegram
         self.app = Application.builder().token(self.token).build()
@@ -175,6 +180,7 @@ class TelegramBot:
         return InlineKeyboardMarkup(botoes)
 
     async def start(self, update, context):
+        context.user_data.pop("planejamento_economia", None)
         await update.message.reply_text(
             "👋 *Olá! Eu sou o Pluto.* 🐶\n\n"
             "Seu assistente inteligente para organizar "
@@ -185,6 +191,7 @@ class TelegramBot:
         )
 
     async def menu(self, update, context):
+        context.user_data.pop("planejamento_economia", None)
         await update.message.reply_text(
             "🐶 *Menu principal*\n\n"
             "O que você deseja fazer?",
@@ -209,6 +216,8 @@ class TelegramBot:
         acao = query.data.split(":", 1)[1]
 
         if acao == "principal":
+
+            context.user_data.pop("planejamento_economia", None)
 
             await query.edit_message_text(
                 "🐶 *Menu principal*\n\n"
@@ -406,11 +415,57 @@ class TelegramBot:
 
         await self._enviar_confirmacao(update, context, resultado)
 
+    async def iniciar_planejamento_economia(self, update, context):
+        context.user_data["planejamento_economia"] = True
+        await update.message.reply_text(
+            "Vamos montar seu plano mensal. 🐶\n\n"
+            "Qual é o seu salário líquido, ou seja, o valor que realmente "
+            "entra na sua conta por mês?\n\n"
+            "Exemplo: `R$ 3.000,00`",
+            parse_mode="Markdown",
+        )
+
+    async def _continuar_planejamento_economia(self, update, context, texto):
+        try:
+            salario = SavingsPlanService.interpretar_valor(texto)
+            plano = SavingsPlanService.calcular(salario)
+        except ValueError:
+            await update.message.reply_text(
+                "Não consegui entender o salário. Digite somente um valor maior "
+                "que zero, por exemplo: `R$ 3.000,00`.",
+                parse_mode="Markdown",
+            )
+            return
+
+        context.user_data.pop("planejamento_economia", None)
+
+        def moeda(valor):
+            texto_valor = f"{valor:,.2f}"
+            return "R$ " + texto_valor.replace(",", "X").replace(".", ",").replace("X", ".")
+
+        await update.message.reply_text(
+            "📊 *Seu plano mensal sugerido*\n\n"
+            f"Salário líquido: *{moeda(plano['salario'])}*\n\n"
+            f"🏠 *Necessidades — 50%:* {moeda(plano['necessidades'])}\n"
+            "Moradia, alimentação, transporte e contas essenciais.\n\n"
+            f"🎈 *Gastos flexíveis — 30%:* {moeda(plano['desejos'])}\n"
+            "Lazer, assinaturas, compras e outros desejos.\n\n"
+            f"🐷 *Guardar — 20%:* {moeda(plano['guardar'])}\n"
+            "Priorize primeiro uma reserva de emergência.\n\n"
+            "Essa é uma referência inicial. Se suas despesas essenciais já "
+            "passam de 50%, podemos adaptar o plano à sua realidade.",
+            parse_mode="Markdown",
+        )
+
     async def receber_mensagem(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
     ):
 
         texto = update.message.text.strip()
+
+        if context.user_data.get("planejamento_economia"):
+            await self._continuar_planejamento_economia(update, context, texto)
+            return
 
         # =====================================================
         # USUÁRIO ESTÁ CRIANDO UMA CONTA
@@ -673,6 +728,11 @@ class TelegramBot:
         # =====================================================
         # NOVA COMPRA
         # =====================================================
+
+        skill = self.skill_router.selecionar(texto)
+        if skill is not None and skill.info.nome != "registrar_compra":
+            await skill.executar(self, update, context)
+            return
 
         mensagem = texto
 

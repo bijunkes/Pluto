@@ -20,6 +20,7 @@ from src.services.csv_import_service import (
     importar_csv,
     ImportacaoCSVError,
 )
+from src.services.financial_summary_service import FinancialSummaryService
 from src.services.auth_service import (
     validar_token_login,
     validar_sessao,
@@ -504,6 +505,20 @@ def criar_categoria(
         )
 
     return _categoria_para_dict(criada)
+
+
+# ============================================================
+# RESUMO FINANCEIRO
+# ============================================================
+
+@app.get("/usuarios/{usuario_id}/resumo-financeiro")
+def obter_resumo_financeiro(
+    usuario_id: int,
+    _: int = Depends(exigir_dono),
+):
+    """Retorna os indicadores financeiros do mês atual."""
+
+    return FinancialSummaryService(Database(usuario_id)).calcular_resumo_mensal()
 
 
 # ============================================================

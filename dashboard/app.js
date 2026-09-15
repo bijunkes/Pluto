@@ -4,6 +4,7 @@ let usuarioIdSessao = null;
 let contas = [];
 let categorias = [];
 let compras = [];
+let resumoFinanceiro = null;
 
 
 // ============================================================
@@ -82,6 +83,14 @@ async function listarCompras() {
 }
 
 
+async function carregarResumoFinanceiro() {
+    resumoFinanceiro = await apiFetch(
+        `/usuarios/${usuarioIdSessao}/resumo-financeiro`
+    );
+    atualizarResumo();
+}
+
+
 async function criarCompra(dados) {
 
     const compra = await apiFetch(
@@ -96,7 +105,8 @@ async function criarCompra(dados) {
 
     await Promise.all([
         listarCompras(),
-        listarContas()
+        listarContas(),
+        carregarResumoFinanceiro()
     ]);
 
     return compra;
@@ -116,6 +126,8 @@ async function listarContas() {
     renderizarContas();
     preencherSelectContas();
     atualizarResumo();
+
+    await carregarResumoFinanceiro();
 }
 
 
@@ -392,13 +404,13 @@ function renderizarCompras() {
 
 function atualizarResumo() {
 
-    const totalGasto = compras.reduce(
+    let totalGasto = compras.reduce(
         (total, compra) =>
             total + Number(compra.valor || 0),
         0
     );
 
-    const saldoTotal = contas.reduce(
+    let saldoTotal = contas.reduce(
         (total, conta) =>
             total + Number(conta.saldo || 0),
         0
@@ -413,6 +425,17 @@ function atualizarResumo() {
     const saldoTotalElemento =
         document.getElementById("saldo-total");
 
+    const mediaDiariaElemento = document.getElementById("media-diaria");
+    const projecaoMensalElemento = document.getElementById("projecao-mensal");
+    const coberturaSaldoElemento = document.getElementById("cobertura-saldo");
+    const variacaoMensalElemento = document.getElementById("variacao-mensal");
+    const maiorCategoriaElemento = document.getElementById("maior-categoria");
+
+    if (resumoFinanceiro) {
+        totalGasto = Number(resumoFinanceiro.total_gasto || 0);
+        saldoTotal = Number(resumoFinanceiro.saldo_total || 0);
+    }
+
 
     if (totalGastoElemento) {
 
@@ -424,7 +447,9 @@ function atualizarResumo() {
     if (totalComprasElemento) {
 
         totalComprasElemento.textContent =
-            compras.length;
+            resumoFinanceiro
+                ? resumoFinanceiro.quantidade_compras
+                : compras.length;
     }
 
 
@@ -432,6 +457,29 @@ function atualizarResumo() {
 
         saldoTotalElemento.textContent =
             formatarMoeda(saldoTotal);
+    }
+
+    if (mediaDiariaElemento && resumoFinanceiro) {
+        mediaDiariaElemento.textContent = formatarMoeda(resumoFinanceiro.media_diaria);
+    }
+    if (projecaoMensalElemento && resumoFinanceiro) {
+        projecaoMensalElemento.textContent = formatarMoeda(resumoFinanceiro.projecao_mensal);
+    }
+    if (coberturaSaldoElemento && resumoFinanceiro) {
+        const dias = resumoFinanceiro.dias_cobertura_saldo;
+        coberturaSaldoElemento.textContent = dias === null ? "Sem estimativa" : `${dias} dias`;
+    }
+    if (variacaoMensalElemento && resumoFinanceiro) {
+        const variacao = resumoFinanceiro.mes_anterior.variacao_percentual;
+        variacaoMensalElemento.textContent = variacao === null
+            ? "Sem comparação"
+            : `${variacao > 0 ? "+" : ""}${variacao.toLocaleString("pt-BR")}%`;
+    }
+    if (maiorCategoriaElemento && resumoFinanceiro) {
+        const categoria = resumoFinanceiro.gastos_por_categoria[0];
+        maiorCategoriaElemento.textContent = categoria
+            ? `${categoria.categoria} (${categoria.percentual.toLocaleString("pt-BR")}%)`
+            : "Sem gastos";
     }
 }
 
@@ -881,7 +929,8 @@ async function inicializarDashboard() {
         await Promise.all([
             listarContas(),
             listarCompras(),
-            listarCategorias()
+            listarCategorias(),
+            carregarResumoFinanceiro()
         ]);
 
 
