@@ -592,24 +592,7 @@ class TelegramBot:
 
         texto = update.message.text.strip()
 
-        if context.user_data.get("planejamento_economia"):
-            await self._continuar_planejamento_economia(update, context, texto)
-            return
-
-        skill_direta = self.skill_router.selecionar(texto)
-        if skill_direta and skill_direta.info.nome == "planejar_economia":
-            await skill_direta.executar(self, update, context)
-            return
-
-        if context.user_data.get("modo_conversa"):
-            if "entrevista_financeira" in context.user_data:
-                await self._continuar_entrevista_financeira(update, context, texto)
-                return
-            if skill_direta and skill_direta.info.nome != "registrar_compra":
-                context.user_data.pop("modo_conversa", None)
-                await skill_direta.executar(self, update, context)
-                return
-            await self._responder_conversa_financeira(update, context, texto)
+        if await self._despachar_estado_prioritario(update, context, texto):
             return
 
         # =====================================================
@@ -875,7 +858,11 @@ class TelegramBot:
         # =====================================================
 
         skill = self.skill_router.selecionar(texto)
-        if skill is not None and skill.info.nome != "registrar_compra":
+        if skill is None:
+            await self._responder_conversa_financeira(update, context, texto)
+            return
+
+        if skill.info.nome != "registrar_compra":
             await skill.executar(self, update, context)
             return
 
@@ -920,6 +907,30 @@ class TelegramBot:
             return
 
         await self._enviar_confirmacao(update, context, resultado)
+
+    async def _despachar_estado_prioritario(self, update, context, texto):
+        """Atende os fluxos que têm prioridade sobre cadastro e compra."""
+        if context.user_data.get("planejamento_economia"):
+            await self._continuar_planejamento_economia(update, context, texto)
+            return True
+
+        skill_direta = self.skill_router.selecionar(texto)
+        if skill_direta and skill_direta.info.nome == "planejar_economia":
+            await skill_direta.executar(self, update, context)
+            return True
+
+        if context.user_data.get("modo_conversa"):
+            if "entrevista_financeira" in context.user_data:
+                await self._continuar_entrevista_financeira(update, context, texto)
+                return True
+            if skill_direta and skill_direta.info.nome != "registrar_compra":
+                context.user_data.pop("modo_conversa", None)
+                await skill_direta.executar(self, update, context)
+                return True
+            await self._responder_conversa_financeira(update, context, texto)
+            return True
+
+        return False
 
     async def confirmar_compra(self, update, context):
         query = update.callback_query
