@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pluto — Seu dinheiro. Mais inteligente.</title>
+    <meta name="description"
+        content="Pluto é um assistente financeiro com Inteligência Artificial que transforma conversas no Telegram em organização financeira. Projeto desenvolvido por uma equipe de Inteligência Artificial do Entra21." />
+
+    <meta property="og:title" content="Pluto — Seu dinheiro. Mais inteligente." />
+    <meta property="og:description"
+        content="Assistente financeiro com Inteligência Artificial que transforma conversas em organização financeira." />
+    <meta property="og:image" content="assets/logo.png" />
+    <meta property="og:type" content="website" />
+
+    <link rel="icon" href="assets/logo.png" type="image/png" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet" />
+
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+</head>
+
+<body>
+
+    <div class="bg-grid" aria-hidden="true"></div>
+
+    <!-- =====================================================================
+     NAVBAR
+     ================================================================== -->
+    <header class="navbar">
+        <div class="container nav-inner">
+            <a class="nav-logo" href="#hero">
+                <img src="assets/logo.png" alt="" />
+                PLUTO
+            </a>
+
+            <nav class="nav-links" aria-label="Navegação principal">
+                <a class="nav-link" href="#projeto">Projeto</a>
+                <a class="nav-link" href="#equipe">Equipe</a>
+                <a class="nav-link" href="#tecnologias">Tecnologias</a>
+                <a class="nav-link" href="#contexto">Contexto</a>
+                <a class="nav-link" href="#contato">Contato</a>
+            </nav>
+
+            <div class="nav-right">
+                <a class="btn btn-primary" href="https://t.me/plutoTrackerBot">Fale com o Pluto</a>
+                <button class="nav-toggle" aria-label="Abrir menu" aria-expanded="false">
+                    <i data-lucide="menu"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <nav class="nav-mobile" aria-label="Navegação móvel">
+        <a class="nav-link" href="#projeto">Projeto</a>
+        <a class="nav-link" href="#equipe">Equipe</a>
+        <a class="nav-link" href="#tecnologias">Tecnologias</a>
+        <a class="nav-link" href="#contexto">Contexto</a>
+        <a class="nav-link" href="#contato">Contato</a>
+        <a class="btn btn-primary" href="https://t.me/plutoTrackerBot" target="_blank" rel="noopener noreferrer">
+            Fale com o Pluto
+        </a>
+    </nav>
+
+    <main id="main">
+
+        <!-- ===================================================================
+     HERO
+     ================================================================ -->
+        <section id="hero" class="hero">
+            <div class="glow hero-glow" aria-hidden="true"></div>
+            <div class="particles" data-count="18" aria-hidden="true"></div>
+
+            <div class="container hero-grid">
+
+                <!-- TEXTO -->
+                <div class="hero-copy reveal">
+                    <div class="hero-mark">
+                        <img src="assets/logo.png" alt="" />
+                        PLUTO
+                    </div>
+
+                    <h1 class="hero-title">
+                        Seu dinheiro.<br />
+                        <span class="line-2">Mais inteligente.</span>
+                    </h1>
+
+                    <p class="hero-subtitle">
+                        Um assistente financeiro com Inteligência Artificial que transforma
+                        conversas em organização financeira.
+                    </p>
+
+                    <div class="badge-row">
+                        <span class="badge">Inteligência Artificial</span>
+                        <span class="badge">Finanças</span>
+                        <span class="badge">Telegram</span>
+                    </div>
+
+                    <div class="hero-actions btn-row">
+                        <a class="btn btn-primary" href="#projeto">
+                            Conheça o projeto ↓
+                        </a>
+
+                        <a class="btn btn-ghost" href="#equipe">
+                            Ver equipe
+                        </a>
+                    </div>
+                </div>
+
+                <!-- VISUAL -->
+                <div class="hero-visual reveal">
+
+                    <div class="hero-visual-glow" aria-hidden="true"></div>
+
+                    <!-- CARD PRINCIPAL -->
+                    <div class="device-card">
+
+                        <div class="device-header">
+                            <div class="device-avatar">
+                                <img src="assets/logo.png" alt="" />
+                            </div>
+
+                            <div>
+                                <div class="device-title">Pluto</div>
+                                <div class="device-status">Online</div>
+                            </div>
+                        </div>
+
+                        <div class="device-body">
+
+                            <div class="bubble bubble-bot">
+                                Oi! Como posso ajudar?
+                            </div>
+
+                            <div class="bubble bubble-user">
+                                Gastei R$ 35 no almoço
+                            </div>
+
+                            <div class="confirm-card">
+
+                                <div class="confirm-card-head">
+                                    <i data-lucide="check-circle-2"></i>
+                                    Registro salvo
+                                </div>
+
+                                <div class="confirm-row">
+                                    <span>Categoria</span>
+                                    <b>Alimentação</b>
+                                </div>
+
+                                <div class="confirm-row">
+                                    <span>Valor</span>
+                                    <b>R$ 35,00</b>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- CHIP DE SALDO -->
+                    <div class="float-chip chip-balance">
+
+                        <div class="chip-label">
+                            Saldo atual
+                        </div>
+
+                        <div class="chip-value">
+                            R$ 1.240,00
+                        </div>
+
+                    </div>
+
+                    <!-- CHIP DA IA -->
+                    <div class="float-chip chip-ai">
+                        <i data-lucide="sparkles"></i>
+                        <span>IA analisando</span>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================================================================
+       O PROJETO
+       ================================================================ -->
+        <section id="projeto" class="section section-border-top">
+            <div class="container">
+                <div class="section-head reveal">
+                    <h2 class="section-title">O que é o Pluto?</h2>
+                    <p class="section-subtitle" style="max-width: 68ch;">
+                        O Pluto é um assistente financeiro inteligente desenvolvido para tornar o controle das finanças
+                        mais simples, natural e acessível. Por meio de uma conversa no Telegram, o usuário pode
+                        registrar compras, consultar informações financeiras e acompanhar seus gastos sem precisar
+                        navegar por sistemas complexos.
+                    </p>
+                </div>
+
+                <div class="flow reveal">
+                    <div class="flow-node">
+                        <div class="flow-node-icon"><i data-lucide="user"></i></div>
+                        <span>Usuário</span>
+                    </div>
+                    <div class="flow-arrow"><i data-lucide="arrow-right"></i></div>
+                    <div class="flow-node">
+                        <div class="flow-node-icon"><i data-lucide="send"></i></div>
+                        <span>Telegram</span>
+                    </div>
+                    <div class="flow-arrow"><i data-lucide="arrow-right"></i></div>
+                    <div class="flow-node is-brand">
+                        <div class="flow-node-icon"><img src="assets/logo.png" alt="" style="width:22px;height:22px;" />
+                        </div>
+                        <span>Pluto + IA</span>
+                    </div>
+                    <div class="flow-arrow"><i data-lucide="arrow-right"></i></div>
+                    <div class="flow-node">
+                        <div class="flow-node-icon"><i data-lucide="database"></i></div>
+                        <span>Banco de dados</span>
+                    </div>
+                    <div class="flow-arrow"><i data-lucide="arrow-right"></i></div>
+                    <div class="flow-node">
+                        <div class="flow-node-icon"><i data-lucide="layout-dashboard"></i></div>
+                        <span>Dashboard</span>
+                    </div>
+                </div>
+
+                <div class="trio reveal">
+                    <div class="trio-item">
+                        <span class="trio-index">01</span>
+                        <h3>Converse</h3>
+                        <p>Registre seus gastos naturalmente através do chat.</p>
+                    </div>
+                    <div class="trio-item">
+                        <span class="trio-index">02</span>
+                        <h3>Organize</h3>
+                        <p>A Inteligência Artificial interpreta as informações e organiza os registros.</p>
+                    </div>
+                    <div class="trio-item">
+                        <span class="trio-index">03</span>
+                        <h3>Acompanhe</h3>
+                        <p>Consulte seus gastos e acompanhe sua vida financeira através do dashboard.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================================================================
+       COMO FUNCIONA
+       ================================================================ -->
+        <section id="como-funciona" class="section section-border-top">
+            <div class="container">
+                <div class="section-head reveal">
+                    <h2 class="section-title">Como funciona</h2>
+                    <p class="section-subtitle">Do primeiro relato ao registro confirmado, em quatro passos.</p>
+                </div>
+
+                <div class="steps reveal">
+                    <div class="step">
+                        <div class="step-num">01</div>
+                        <h3>Envie uma mensagem</h3>
+                        <div class="step-visual">
+                            <div class="bubble bubble-user">Gastei R$ 42 no mercado</div>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-num">02</div>
+                        <h3>A IA interpreta</h3>
+                        <div class="step-visual">
+                            <div class="confirm-row"><span>Produto</span><b>Compras do mercado</b></div>
+                            <div class="confirm-row"><span>Categoria</span><b>Alimentação</b></div>
+                            <div class="confirm-row"><span>Valor</span><b>R$ 42,00</b></div>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-num">03</div>
+                        <h3>Confirme</h3>
+                        <div class="step-visual">
+                            <div class="step-confirm">
+                                <i data-lucide="check-circle-2"></i>
+                                Registro confirmado
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-num">04</div>
+                        <h3>Acompanhe</h3>
+                        <div class="step-visual">
+                            <div class="step-mini-chart" data-bars="35,60,45,80,55,70"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================================================================
+       EQUIPE
+       ================================================================ -->
+        <section id="equipe" class="section section-border-top">
+            <div class="container">
+                <div class="section-head reveal">
+                    <h2 class="section-title">Quem está por trás do Pluto?</h2>
+                    <p class="section-subtitle">Cinco pessoas. Uma ideia. Um projeto construído com tecnologia,
+                        colaboração e Inteligência Artificial.</p>
+                </div>
+
+                <div id="team-grid" class="team-grid"></div>
+            </div>
+        </section>
+
+        <!-- ===================================================================
+   FOTO DA EQUIPE
+   ================================================================ -->
+        <section id="foto-equipe" class="team-stage">
+            <div class="container">
+                <div class="section-head section-head--center reveal">
+                    <span class="eyebrow">A EQUIPE</span>
+                    <h2 class="section-title">Por trás do código,<br />existe uma equipe.</h2>
+                    <p class="section-subtitle">Cinco pessoas. Uma ideia. Um projeto construído com tecnologia,
+                        colaboração e Inteligência Artificial.</p>
+                </div>
+
+                <figure class="team-stage-figure reveal">
+                    <img class="team-stage-img" src="assets/foto_equipe_png.png"
+                        alt="Equipe Pluto: os cinco integrantes do projeto lado a lado" loading="lazy" />
+
+                    <div class="stage-meta-row" aria-hidden="true">
+                        <div class="stage-meta">
+                            <span class="stage-meta-num">05</span>
+                            <span class="stage-meta-label">Integrantes</span>
+                        </div>
+                        <div class="stage-meta stage-meta--end">
+                            <span class="stage-meta-num">01</span>
+                            <span class="stage-meta-label">Projeto</span>
+                        </div>
+                    </div>
+
+                    <figcaption class="stage-baseline">
+                        <span>Pluto</span>
+                        <span>Entra21 · IA</span>
+                    </figcaption>
+                </figure>
+            </div>
+        </section>
+
+        <!-- ===================================================================
+       TECNOLOGIAS
+       ================================================================ -->
+        <section id="tecnologias" class="section section-border-top">
+            <div class="container">
+                <div class="section-head reveal">
+                    <h2 class="section-title">Construído com tecnologia.</h2>
+                </div>
+
+                <div class="tech-hub reveal">
+                    <span class="tech-hub-line"></span>
+                    <span class="tech-hub-node"><img src="assets/logo.png" alt="" /> Pluto Stack</span>
+                    <span class="tech-hub-line right"></span>
+                </div>
+
+                <div id="tech-grid" class="tech-grid reveal"></div>
+            </div>
+        </section>
+
+        <!-- ===================================================================
+       ARQUITETURA
+       ================================================================ -->
+        <section id="arquitetura" class="section section-border-top">
+            <div class="container">
+                <div class="section-head section-head--center reveal">
+                    <h2 class="section-title">Arquitetura do sistema</h2>
+                    <p class="section-subtitle">Da mensagem no Telegram ao dashboard financeiro — o caminho que os dados
+                        percorrem.</p>
+                </div>
+
+                <div id="arch" class="arch"></div>
+            </div>
+        </section>
+
+        <!-- ===================================================================
+       CONTEXTO
+       ================================================================ -->
+        <section id="contexto" class="section section-border-top">
+            <div class="container">
+                <div class="section-head reveal">
+                    <h2 class="section-title">De onde veio o Pluto?</h2>
+                </div>
+
+                <div class="meta-panel reveal">
+                    <div id="meta-grid" class="meta-grid"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================================================================
+       NÚMEROS
+       ================================================================ -->
+        <section id="numeros" class="section--tight section-border-top">
+            <div class="container">
+                <div class="section-head section-head--center reveal">
+                    <h2 class="section-title" style="font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem);">O Pluto em números
+                    </h2>
+                </div>
+                <div id="stats-row" class="stats-row reveal"></div>
+            </div>
+        </section>
+
+        <!-- ===================================================================
+       CONTATO / REDES
+       ================================================================ -->
+        <section id="contato" class="section section-border-top">
+            <div class="container">
+                <div class="social-block reveal">
+                    <div class="social-copy">
+                        <h2>Continue acompanhando o Pluto.</h2>
+                        <p>Quer acompanhar o projeto, nossas evoluções e bastidores?</p>
+                    </div>
+                    <a class="btn btn-primary" href="https://www.instagram.com/plutoassistente/" target="_blank"
+                        rel="noopener noreferrer">
+                        Instagram do Pluto ↗
+                    </a>
+                </div>
+
+                <span class="eyebrow" style="margin-top: 40px;">Perfis da equipe</span>
+                <div id="team-mini" class="team-mini"></div>
+            </div>
+        </section>
+
+        <!-- ===================================================================
+       CTA FINAL
+       ================================================================ -->
+        <section class="section final-cta section-border-top">
+            <img class="final-cta-watermark" src="assets/logo.png" alt="" aria-hidden="true" />
+            <div class="particles" data-count="12" aria-hidden="true"></div>
+            <div class="container">
+                <h2 class="reveal">Esse é o Pluto.</h2>
+                <p class="reveal">Uma ideia transformada em código, inteligência e colaboração.</p>
+                <div class="btn-row reveal">
+                    <a class="btn btn-primary" href="#equipe">Conheça a equipe</a>
+                    <a class="btn btn-ghost" href="https://www.instagram.com/plutoassistente/" target="_blank"
+                        rel="noopener noreferrer">Instagram do Pluto ↗</a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- =====================================================================
+     FOOTER
+     ================================================================== -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-top">
+                <div>
+                    <div class="footer-brand">
+                        <img src="assets/logo.png" alt="" />
+                        <span class="footer-brand-name">Pluto</span>
+                    </div>
+                    <p class="footer-tagline">
+                        Pluto — Assistente financeiro inteligente<br />
+                        Desenvolvido pela equipe Pluto · Entra21
+                    </p>
+                </div>
+
+                <div class="footer-meta">
+                    <span>Inteligência Artificial</span>
+                    <span>Proway</span>
+                    <span>Blumenau — SC</span>
+                </div>
+
+                <div class="footer-links">
+                    <a href="https://www.instagram.com/plutoassistente/" target="_blank" rel="noopener noreferrer"
+                        aria-label="Instagram do Pluto">
+                        <i class="fa-brands fa-instagram"></i>
+                    </a>
+
+                    <a href="https://github.com/bijunkes/Pluto" aria-label="GitHub do Projeto">
+                        <i class="fa-brands fa-github"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <span>© <span id="year">2026</span> Pluto. Projeto desenvolvido para o Entra21.</span>
+            </div>
+        </div>
+    </footer>
+
+    <script src="data.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
