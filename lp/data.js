@@ -14,7 +14,7 @@ const PLUTO_DATA = {
     {
         id: "bianca",
         name: "Bianca Junkes Rech",
-        role: "AI & Dev ullstack · Líder",
+        role: "AI & Dev Backend · Líder",
         lead: true,
         description:
             "Liderança da equipe, desenvolvimento do backend e integração das soluções de Inteligência Artificial.",
