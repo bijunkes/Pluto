@@ -6,7 +6,6 @@ let categorias = [];
 let compras = [];
 let resumoFinanceiro = null;
 
-
 // ============================================================
 // API
 // ============================================================
@@ -14,13 +13,18 @@ let resumoFinanceiro = null;
 async function apiFetch(url, options = {}) {
 
     const resposta = await fetch(`${API_BASE}${url}`, {
+
         credentials: "include",
+
         ...options,
+
         headers: {
             "Content-Type": "application/json",
             ...(options.headers || {})
         }
+
     });
+
 
     if (!resposta.ok) {
 
@@ -35,7 +39,8 @@ async function apiFetch(url, options = {}) {
                 erro.message ||
                 mensagem;
 
-        } catch (_) {}
+        } catch (_) { }
+
 
         if (resposta.status === 401) {
 
@@ -43,16 +48,20 @@ async function apiFetch(url, options = {}) {
 
         }
 
+
         throw new Error(mensagem);
+
     }
+
 
     if (resposta.status === 204) {
         return null;
     }
 
-    return resposta.json();
-}
 
+    return resposta.json();
+
+}
 
 // ============================================================
 // AUTENTICAÇÃO
@@ -65,8 +74,8 @@ async function usuarioAtual() {
     usuarioIdSessao = sessao.usuario_id;
 
     return sessao;
-}
 
+}
 
 // ============================================================
 // COMPRAS
@@ -74,22 +83,26 @@ async function usuarioAtual() {
 
 async function listarCompras() {
 
+
     compras = await apiFetch(
         `/usuarios/${usuarioIdSessao}/compras`
     );
 
     renderizarCompras();
+
     atualizarResumo();
+
 }
 
-
 async function carregarResumoFinanceiro() {
+
     resumoFinanceiro = await apiFetch(
         `/usuarios/${usuarioIdSessao}/resumo-financeiro`
     );
-    atualizarResumo();
-}
 
+    atualizarResumo();
+
+}
 
 async function criarCompra(dados) {
 
@@ -101,7 +114,9 @@ async function criarCompra(dados) {
         }
     );
 
+
     compras.unshift(compra);
+
 
     await Promise.all([
         listarCompras(),
@@ -109,9 +124,10 @@ async function criarCompra(dados) {
         carregarResumoFinanceiro()
     ]);
 
-    return compra;
-}
 
+    return compra;
+
+}
 
 // ============================================================
 // CONTAS
@@ -119,17 +135,21 @@ async function criarCompra(dados) {
 
 async function listarContas() {
 
+
     contas = await apiFetch(
         `/usuarios/${usuarioIdSessao}/contas`
     );
 
+
     renderizarContas();
+
     preencherSelectContas();
+
     atualizarResumo();
 
     await carregarResumoFinanceiro();
-}
 
+}
 
 async function criarConta(dados) {
 
@@ -141,15 +161,18 @@ async function criarConta(dados) {
         }
     );
 
+
     contas.push(conta);
 
     renderizarContas();
+
     preencherSelectContas();
+
     atualizarResumo();
 
     return conta;
-}
 
+}
 
 // ============================================================
 // CATEGORIAS
@@ -161,10 +184,12 @@ async function listarCategorias() {
         `/usuarios/${usuarioIdSessao}/categorias`
     );
 
-    renderizarCategorias();
-    preencherSelectCategorias();
-}
 
+    renderizarCategorias();
+
+    preencherSelectCategorias();
+
+}
 
 async function criarCategoria(dados) {
 
@@ -176,14 +201,16 @@ async function criarCategoria(dados) {
         }
     );
 
+
     categorias.push(categoria);
 
     renderizarCategorias();
+
     preencherSelectCategorias();
 
     return categoria;
-}
 
+}
 
 // ============================================================
 // RENDER CONTAS
@@ -191,12 +218,18 @@ async function criarCategoria(dados) {
 
 function renderizarContas() {
 
-    const lista = document.getElementById("lista-contas");
-    const vazio = document.getElementById("contas-vazio");
+    const lista =
+        document.getElementById("lista-contas");
+
+    const vazio =
+        document.getElementById("contas-vazio");
+
 
     if (!lista) return;
 
+
     lista.innerHTML = "";
+
 
     if (!contas.length) {
 
@@ -207,46 +240,59 @@ function renderizarContas() {
         return;
     }
 
+
     if (vazio) {
         vazio.hidden = true;
     }
 
+
     contas.forEach(conta => {
 
-        const card = document.createElement("div");
+        const card =
+            document.createElement("div");
+
 
         card.className = "conta-card";
 
-        const tipo = formatarTipoConta(conta.tipo);
 
-        const saldo = Number(
-            conta.saldo ?? 0
-        );
+        const tipo =
+            formatarTipoConta(conta.tipo);
+
+
+        const saldo =
+            Number(conta.saldo ?? 0);
+
 
         card.innerHTML = `
-            <div class="conta-card-topo">
-                <span class="conta-icone">
-                    ${tipo.icone}
-                </span>
 
-                <span class="conta-tipo">
-                    ${tipo.nome}
-                </span>
-            </div>
+        <div class="conta-card-topo">
 
-            <h3>
-                ${escapeHtml(conta.nome)}
-            </h3>
+            <span class="conta-icone">
+                ${tipo.icone}
+            </span>
 
-            <p class="conta-saldo">
-                ${formatarMoeda(saldo)}
-            </p>
-        `;
+            <span class="conta-tipo">
+                ${tipo.nome}
+            </span>
+
+        </div>
+
+        <h3>
+            ${escapeHtml(conta.nome)}
+        </h3>
+
+        <p class="conta-saldo">
+            ${formatarMoeda(saldo)}
+        </p>
+
+    `;
+
 
         lista.appendChild(card);
-    });
-}
 
+    });
+
+}
 
 // ============================================================
 // SELECT DE CONTAS
@@ -254,31 +300,40 @@ function renderizarContas() {
 
 function preencherSelectContas() {
 
-    const select = document.getElementById(
-        "campo-conta"
-    );
+    const select =
+        document.getElementById("campo-conta");
+
 
     if (!select) return;
 
+
     select.innerHTML = `
-        <option value="">
-            Selecione uma conta
-        </option>
-    `;
+
+    <option value="">
+        Selecione uma conta
+    </option>
+
+`;
+
 
     contas.forEach(conta => {
 
-        const option = document.createElement("option");
+        const option =
+            document.createElement("option");
+
 
         option.value = conta.id;
+
 
         option.textContent =
             `${conta.nome} — ${formatarMoeda(conta.saldo)}`;
 
-        select.appendChild(option);
-    });
-}
 
+        select.appendChild(option);
+
+    });
+
+}
 
 // ============================================================
 // SELECT DE CATEGORIAS
@@ -286,30 +341,40 @@ function preencherSelectContas() {
 
 function preencherSelectCategorias() {
 
-    const select = document.getElementById(
-        "campo-categoria"
-    );
+    const select =
+        document.getElementById("campo-categoria");
+
 
     if (!select) return;
 
+
     select.innerHTML = `
-        <option value="">
-            Selecione uma categoria
-        </option>
-    `;
+
+    <option value="">
+        Selecione uma categoria
+    </option>
+
+`;
+
 
     categorias.forEach(categoria => {
 
-        const option = document.createElement("option");
+        const option =
+            document.createElement("option");
+
 
         option.value = categoria.nome;
 
-        option.textContent = categoria.nome;
+
+        option.textContent =
+            categoria.nome;
+
 
         select.appendChild(option);
-    });
-}
 
+    });
+
+}
 
 // ============================================================
 // RENDER CATEGORIAS
@@ -317,26 +382,35 @@ function preencherSelectCategorias() {
 
 function renderizarCategorias() {
 
-    const lista = document.getElementById(
-        "lista-categorias"
-    );
+    const lista =
+        document.getElementById("lista-categorias");
+
 
     if (!lista) return;
 
+
     lista.innerHTML = "";
+
 
     categorias.forEach(categoria => {
 
-        const item = document.createElement("span");
+        const item =
+            document.createElement("span");
 
-        item.className = "categoria-item";
 
-        item.textContent = categoria.nome;
+        item.className =
+            "categoria-item";
+
+
+        item.textContent =
+            categoria.nome;
+
 
         lista.appendChild(item);
-    });
-}
 
+    });
+
+}
 
 // ============================================================
 // RENDER COMPRAS
@@ -344,17 +418,18 @@ function renderizarCategorias() {
 
 function renderizarCompras() {
 
-    const lista = document.getElementById(
-        "lista-compras"
-    );
+    const lista =
+        document.getElementById("lista-compras");
 
-    const vazio = document.getElementById(
-        "compras-vazio"
-    );
+    const vazio =
+        document.getElementById("compras-vazio");
+
 
     if (!lista) return;
 
+
     lista.innerHTML = "";
+
 
     if (!compras.length) {
 
@@ -365,38 +440,48 @@ function renderizarCompras() {
         return;
     }
 
+
     if (vazio) {
         vazio.hidden = true;
     }
 
+
     compras.forEach(compra => {
 
-        const item = document.createElement("div");
+        const item =
+            document.createElement("li");
 
-        item.className = "compra-item";
+
+        item.className =
+            "compra-item";
+
 
         item.innerHTML = `
-            <div class="compra-info">
 
-                <strong>
-                    ${escapeHtml(compra.produto)}
-                </strong>
+        <div class="compra-info">
 
-                <span>
-                    ${escapeHtml(compra.categoria)}
-                </span>
-
-            </div>
-
-            <strong class="compra-valor">
-                ${formatarMoeda(compra.valor)}
+            <strong>
+                ${escapeHtml(compra.produto)}
             </strong>
-        `;
+
+            <span>
+                ${escapeHtml(compra.categoria)}
+            </span>
+
+        </div>
+
+        <strong class="compra-valor">
+            ${formatarMoeda(compra.valor)}
+        </strong>
+
+    `;
+
 
         lista.appendChild(item);
-    });
-}
 
+    });
+
+}
 
 // ============================================================
 // RESUMO
@@ -410,30 +495,59 @@ function atualizarResumo() {
         0
     );
 
+
     let saldoTotal = contas.reduce(
         (total, conta) =>
             total + Number(conta.saldo || 0),
         0
     );
 
+
     const totalGastoElemento =
         document.getElementById("total-gasto");
+
 
     const totalComprasElemento =
         document.getElementById("total-compras");
 
+
     const saldoTotalElemento =
         document.getElementById("saldo-total");
 
-    const mediaDiariaElemento = document.getElementById("media-diaria");
-    const projecaoMensalElemento = document.getElementById("projecao-mensal");
-    const coberturaSaldoElemento = document.getElementById("cobertura-saldo");
-    const variacaoMensalElemento = document.getElementById("variacao-mensal");
-    const maiorCategoriaElemento = document.getElementById("maior-categoria");
+
+    const mediaDiariaElemento =
+        document.getElementById("media-diaria");
+
+
+    const projecaoMensalElemento =
+        document.getElementById("projecao-mensal");
+
+
+    const coberturaSaldoElemento =
+        document.getElementById("cobertura-saldo");
+
+
+    const variacaoMensalElemento =
+        document.getElementById("variacao-mensal");
+
+
+    const maiorCategoriaElemento =
+        document.getElementById("maior-categoria");
+
 
     if (resumoFinanceiro) {
-        totalGasto = Number(resumoFinanceiro.total_gasto || 0);
-        saldoTotal = Number(resumoFinanceiro.saldo_total || 0);
+
+        totalGasto =
+            Number(
+                resumoFinanceiro.total_gasto || 0
+            );
+
+
+        saldoTotal =
+            Number(
+                resumoFinanceiro.saldo_total || 0
+            );
+
     }
 
 
@@ -441,6 +555,7 @@ function atualizarResumo() {
 
         totalGastoElemento.textContent =
             formatarMoeda(totalGasto);
+
     }
 
 
@@ -450,6 +565,7 @@ function atualizarResumo() {
             resumoFinanceiro
                 ? resumoFinanceiro.quantidade_compras
                 : compras.length;
+
     }
 
 
@@ -457,32 +573,87 @@ function atualizarResumo() {
 
         saldoTotalElemento.textContent =
             formatarMoeda(saldoTotal);
+
     }
+
 
     if (mediaDiariaElemento && resumoFinanceiro) {
-        mediaDiariaElemento.textContent = formatarMoeda(resumoFinanceiro.media_diaria);
-    }
-    if (projecaoMensalElemento && resumoFinanceiro) {
-        projecaoMensalElemento.textContent = formatarMoeda(resumoFinanceiro.projecao_mensal);
-    }
-    if (coberturaSaldoElemento && resumoFinanceiro) {
-        const dias = resumoFinanceiro.dias_cobertura_saldo;
-        coberturaSaldoElemento.textContent = dias === null ? "Sem estimativa" : `${dias} dias`;
-    }
-    if (variacaoMensalElemento && resumoFinanceiro) {
-        const variacao = resumoFinanceiro.mes_anterior.variacao_percentual;
-        variacaoMensalElemento.textContent = variacao === null
-            ? "Sem comparação"
-            : `${variacao > 0 ? "+" : ""}${variacao.toLocaleString("pt-BR")}%`;
-    }
-    if (maiorCategoriaElemento && resumoFinanceiro) {
-        const categoria = resumoFinanceiro.gastos_por_categoria[0];
-        maiorCategoriaElemento.textContent = categoria
-            ? `${categoria.categoria} (${categoria.percentual.toLocaleString("pt-BR")}%)`
-            : "Sem gastos";
-    }
-}
 
+        mediaDiariaElemento.textContent =
+            formatarMoeda(
+                resumoFinanceiro.media_diaria
+            );
+
+    }
+
+
+    if (
+        projecaoMensalElemento &&
+        resumoFinanceiro
+    ) {
+
+        projecaoMensalElemento.textContent =
+            formatarMoeda(
+                resumoFinanceiro.projecao_mensal
+            );
+
+    }
+
+
+    if (
+        coberturaSaldoElemento &&
+        resumoFinanceiro
+    ) {
+
+        const dias =
+            resumoFinanceiro.dias_cobertura_saldo;
+
+
+        coberturaSaldoElemento.textContent =
+            dias === null
+                ? "Sem estimativa"
+                : `${dias} dias`;
+
+    }
+
+
+    if (
+        variacaoMensalElemento &&
+        resumoFinanceiro
+    ) {
+
+        const variacao =
+            resumoFinanceiro
+                .mes_anterior
+                .variacao_percentual;
+
+
+        variacaoMensalElemento.textContent =
+            variacao === null
+                ? "Sem comparação"
+                : `${variacao > 0 ? "+" : ""}${variacao.toLocaleString("pt-BR")}%`;
+
+    }
+
+
+    if (
+        maiorCategoriaElemento &&
+        resumoFinanceiro
+    ) {
+
+        const categoria =
+            resumoFinanceiro
+                .gastos_por_categoria[0];
+
+
+        maiorCategoriaElemento.textContent =
+            categoria
+                ? `${categoria.categoria} (${categoria.percentual.toLocaleString("pt-BR")}%)`
+                : "Sem gastos";
+
+    }
+
+}
 
 // ============================================================
 // FORMULÁRIO DE CONTA
@@ -490,11 +661,13 @@ function atualizarResumo() {
 
 function configurarFormularioConta() {
 
-    const form = document.getElementById(
-        "form-conta"
-    );
+
+    const form =
+        document.getElementById("form-conta");
+
 
     if (!form) return;
+
 
     form.addEventListener(
         "submit",
@@ -502,13 +675,15 @@ function configurarFormularioConta() {
 
             event.preventDefault();
 
-            const erro = document.getElementById(
-                "conta-erro"
-            );
+
+            const erro =
+                document.getElementById("conta-erro");
+
 
             if (erro) {
                 erro.textContent = "";
             }
+
 
             const nome =
                 document
@@ -516,10 +691,12 @@ function configurarFormularioConta() {
                     .value
                     .trim();
 
+
             const tipo =
                 document
                     .getElementById("campo-tipo-conta")
                     .value;
+
 
             const saldo =
                 Number(
@@ -543,12 +720,18 @@ function configurarFormularioConta() {
             try {
 
                 await criarConta({
+
                     nome,
+
                     tipo,
+
                     saldoInicial: saldo
+
                 });
 
+
                 form.reset();
+
 
             } catch (error) {
 
@@ -556,11 +739,13 @@ function configurarFormularioConta() {
                     erro.textContent =
                         error.message;
                 }
+
             }
+
         }
     );
-}
 
+}
 
 // ============================================================
 // FORMULÁRIO DE COMPRA
@@ -568,11 +753,13 @@ function configurarFormularioConta() {
 
 function configurarFormularioCompra() {
 
-    const form = document.getElementById(
-        "form-compra"
-    );
+
+    const form =
+        document.getElementById("form-compra");
+
 
     if (!form) return;
+
 
     form.addEventListener(
         "submit",
@@ -580,9 +767,10 @@ function configurarFormularioCompra() {
 
             event.preventDefault();
 
-            const erro = document.getElementById(
-                "compra-erro"
-            );
+
+            const erro =
+                document.getElementById("compra-erro");
+
 
             if (erro) {
                 erro.textContent = "";
@@ -595,15 +783,18 @@ function configurarFormularioCompra() {
                     .value
                     .trim();
 
+
             const categoria =
                 document
                     .getElementById("campo-categoria")
                     .value;
 
+
             const contaId =
                 document
                     .getElementById("campo-conta")
                     .value;
+
 
             const valor =
                 Number(
@@ -660,13 +851,20 @@ function configurarFormularioCompra() {
             try {
 
                 await criarCompra({
+
                     produto,
+
                     categoria,
+
                     valor,
+
                     contaId: Number(contaId)
+
                 });
 
+
                 form.reset();
+
 
             } catch (error) {
 
@@ -674,11 +872,13 @@ function configurarFormularioCompra() {
                     erro.textContent =
                         error.message;
                 }
+
             }
+
         }
     );
-}
 
+}
 
 // ============================================================
 // FORMULÁRIO DE CATEGORIA
@@ -686,11 +886,13 @@ function configurarFormularioCompra() {
 
 function configurarFormularioCategoria() {
 
-    const form = document.getElementById(
-        "form-categoria"
-    );
+
+    const form =
+        document.getElementById("form-categoria");
+
 
     if (!form) return;
+
 
     form.addEventListener(
         "submit",
@@ -698,13 +900,15 @@ function configurarFormularioCategoria() {
 
             event.preventDefault();
 
-            const erro = document.getElementById(
-                "categoria-erro"
-            );
+
+            const erro =
+                document.getElementById("categoria-erro");
+
 
             if (erro) {
                 erro.textContent = "";
             }
+
 
             const nome =
                 document
@@ -730,7 +934,9 @@ function configurarFormularioCategoria() {
                     nome
                 });
 
+
                 form.reset();
+
 
             } catch (error) {
 
@@ -738,11 +944,13 @@ function configurarFormularioCategoria() {
                     erro.textContent =
                         error.message;
                 }
+
             }
+
         }
     );
-}
 
+}
 
 // ============================================================
 // LOGOUT
@@ -750,11 +958,12 @@ function configurarFormularioCategoria() {
 
 function configurarLogout() {
 
-    const botao = document.getElementById(
-        "btn-sair"
-    );
+    const botao =
+        document.getElementById("btn-sair");
+
 
     if (!botao) return;
+
 
     botao.addEventListener(
         "click",
@@ -769,15 +978,18 @@ function configurarLogout() {
                     }
                 );
 
+
             } finally {
 
                 window.location.href =
                     "/login.html";
+
             }
+
         }
     );
-}
 
+}
 
 // ============================================================
 // TEMA
@@ -785,64 +997,135 @@ function configurarLogout() {
 
 function configurarTema() {
 
-    const botao = document.getElementById(
-        "btn-tema"
-    );
+    const botao =
+        document.getElementById("btn-tema");
 
-    const icone = document.getElementById(
-        "icone-tema"
-    );
+    const icone =
+        document.getElementById("icone-tema");
 
-    if (!botao) return;
-
-
-    function atualizarIcone() {
-
-        const temaAtual =
-            document.documentElement
-                .getAttribute("data-tema");
-
-        if (!icone) return;
-
-        icone.textContent =
-            temaAtual === "dark"
-                ? "☀️"
-                : "🌙";
+    if (!botao) {
+        console.warn("Botão de tema não encontrado.");
+        return;
     }
+
+
+    function aplicarTema(tema) {
+
+        const temaFinal =
+            tema === "light"
+                ? "light"
+                : "dark";
+
+
+        // Aplica diretamente no BODY
+        document.body.classList.toggle(
+            "tema-claro",
+            temaFinal === "light"
+        );
+
+
+        // Mantém também no HTML
+        // para persistência/compatibilidade
+        document.documentElement.setAttribute(
+            "data-theme",
+            temaFinal
+        );
+
+
+        localStorage.setItem(
+            "pluto_tema",
+            temaFinal
+        );
+
+
+        atualizarIcone(temaFinal);
+    }
+
+
+    function atualizarIcone(tema) {
+
+        if (icone) {
+
+            icone.textContent =
+                tema === "dark"
+                    ? "☀️"
+                    : "🌙";
+
+        }
+
+
+        botao.setAttribute(
+            "aria-label",
+            tema === "dark"
+                ? "Ativar modo claro"
+                : "Ativar modo escuro"
+        );
+
+
+        botao.setAttribute(
+            "title",
+            tema === "dark"
+                ? "Ativar modo claro"
+                : "Ativar modo escuro"
+        );
+
+    }
+
+
+    // Tema salvo
+    const salvo =
+        localStorage.getItem("pluto_tema");
+
+
+    // Tema do sistema
+    const sistema =
+        window.matchMedia(
+            "(prefers-color-scheme: light)"
+        ).matches
+            ? "light"
+            : "dark";
+
+
+    // Prioridade:
+    // 1. escolha salva pelo usuário
+    // 2. sistema operacional
+    const temaInicial =
+        salvo || sistema;
+
+
+    aplicarTema(temaInicial);
 
 
     botao.addEventListener(
         "click",
         () => {
 
-            const atual =
-                document.documentElement
-                    .getAttribute("data-tema");
-
-            const novo =
-                atual === "dark"
+            const temaAtual =
+                document.body.classList.contains(
+                    "tema-claro"
+                )
                     ? "light"
                     : "dark";
 
-            document.documentElement
-                .setAttribute(
-                    "data-tema",
-                    novo
-                );
 
-            localStorage.setItem(
-                "pluto_tema",
-                novo
+            const novoTema =
+                temaAtual === "dark"
+                    ? "light"
+                    : "dark";
+
+
+            aplicarTema(novoTema);
+
+
+            console.log(
+                "Pluto — tema:",
+                novoTema
             );
 
-            atualizarIcone();
         }
     );
 
-
-    atualizarIcone();
 }
-
 
 // ============================================================
 // UTILITÁRIOS
@@ -857,8 +1140,8 @@ function formatarMoeda(valor) {
             currency: "BRL"
         }
     ).format(Number(valor) || 0);
-}
 
+}
 
 function formatarTipoConta(tipo) {
 
@@ -883,26 +1166,33 @@ function formatarTipoConta(tipo) {
             nome: "Investimento",
             icone: "📈"
         }
+
     };
+
 
     return tipos[tipo] || {
-        nome: tipo,
-        icone: "💰"
-    };
-}
 
+        nome: tipo,
+
+        icone: "💰"
+
+    };
+
+}
 
 function escapeHtml(texto) {
 
-    const div = document.createElement(
-        "div"
-    );
+    const div =
+        document.createElement("div");
 
-    div.textContent = texto ?? "";
+
+    div.textContent =
+        texto ?? "";
+
 
     return div.innerHTML;
-}
 
+}
 
 // ============================================================
 // INICIALIZAÇÃO
@@ -911,14 +1201,14 @@ function escapeHtml(texto) {
 async function inicializarDashboard() {
 
     const telaCarregando =
-        document.getElementById(
-            "tela-carregando"
-        );
+        document.getElementById("tela-carregando");
 
     const pagina =
-        document.getElementById(
-            "pagina"
-        );
+        document.getElementById("pagina");
+
+
+    // O tema é configurado primeiro.
+    configurarTema();
 
 
     try {
@@ -935,10 +1225,12 @@ async function inicializarDashboard() {
 
 
         configurarFormularioConta();
+
         configurarFormularioCompra();
+
         configurarFormularioCategoria();
+
         configurarLogout();
-        configurarTema();
 
 
         if (pagina) {
@@ -956,12 +1248,15 @@ async function inicializarDashboard() {
         window.location.href =
             "/login.html";
 
+
     } finally {
 
         if (telaCarregando) {
             telaCarregando.hidden = true;
         }
+
     }
+
 }
 
 

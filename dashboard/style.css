@@ -1,19 +1,15 @@
-/* Pluto · Dashboard
-   Tema: fintech noturna com identidade orbital sutil.
-   Fundo quase preto, verde da marca como único destaque,
-   arcos finos (órbitas) como motivo estrutural recorrente. */
-
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
-
 /* ============================================================
-   VARIÁVEIS
-   ============================================================ */
+VARIÁVEIS — DARK
+============================================================ */
 
 :root {
+
   --bg: #080808;
   --bg-carta: #101210;
   --bg-campo: #161816;
+  --bg-campo-foco: #1a1c1a;
 
   --linha: rgba(255, 255, 255, 0.08);
   --linha-forte: rgba(255, 255, 255, 0.16);
@@ -27,11 +23,15 @@
   --verde-escuro: #0d2213;
   --verde-vidro: rgba(23, 201, 63, 0.14);
 
-  --bg-campo-foco: #1a1c1a;
   --chip-texto: #a9f0bb;
   --texto-botao: #06170b;
 
   --vermelho: #f1655f;
+
+  --orbita: rgba(23, 201, 63, 0.09);
+  --estrelas: rgba(255, 255, 255, 0.5);
+  --hover-superficie: rgba(255, 255, 255, 0.025);
+  --hover-botao-sair: rgba(255, 255, 255, 0.03);
 
   --sombra-carta:
     0 1px 0 rgba(255, 255, 255, 0.03) inset,
@@ -40,23 +40,17 @@
 
 
 /* ============================================================
-   RESET
-   ============================================================ */
+TEMA CLARO
+============================================================ */
 
-* {
-  box-sizing: border-box;
-}
+body.tema-claro {
 
-html {
-  color-scheme: dark;
-}
-
-html[data-theme="light"] {
   color-scheme: light;
 
   --bg: #f4f7f4;
   --bg-carta: #ffffff;
   --bg-campo: #f0f3f0;
+  --bg-campo-foco: #ffffff;
 
   --linha: rgba(10, 25, 14, 0.10);
   --linha-forte: rgba(10, 25, 14, 0.18);
@@ -66,44 +60,43 @@ html[data-theme="light"] {
   --texto-fraco: #98a19b;
 
   --verde: #11ad35;
-  --verde-forte: #0bbd36;
+  --verde-forte: #0b9f2d;
   --verde-escuro: #e8f8ec;
   --verde-vidro: rgba(17, 173, 53, 0.12);
 
-  --bg-campo-foco: #ffffff;
   --chip-texto: #087d25;
   --texto-botao: #ffffff;
 
+  --vermelho: #d94b45;
+
+  --orbita: rgba(17, 173, 53, 0.10);
+  --estrelas: rgba(10, 25, 14, 0.35);
+  --hover-superficie: rgba(10, 25, 14, 0.025);
+  --hover-botao-sair: rgba(10, 25, 14, 0.035);
+
   --sombra-carta:
     0 1px 0 rgba(255, 255, 255, 0.8) inset,
-    0 14px 34px -22px rgba(25, 45, 30, 0.28);
+    0 14px 34px -22px rgba(25, 45, 30, 0.20);
 }
 
-
 /* ============================================================
-   HIDDEN
-   ============================================================ */
+RESET
+============================================================ */
 
-/*
- * Garante que elementos controlados pelo atributo
- * HTML "hidden" realmente desapareçam.
- *
- * Isso é importante para:
- * #tela-carregando
- * #pagina
- * estados vazios
- */
+* {
+  box-sizing: border-box;
+}
 
 [hidden] {
   display: none !important;
 }
 
-
 /* ============================================================
-   BODY
-   ============================================================ */
+BODY
+============================================================ */
 
 body {
+
   margin: 0;
   min-height: 100vh;
 
@@ -117,12 +110,16 @@ body {
   position: relative;
 
   overflow-x: hidden;
-}
 
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
+}
 
 /* Campo estelar */
 
 body::before {
+
   content: "";
 
   position: fixed;
@@ -131,10 +128,8 @@ body::before {
   z-index: -2;
 
   background-image:
-    radial-gradient(
-      rgba(255, 255, 255, 0.5) 0.6px,
-      transparent 0.6px
-    );
+    radial-gradient(var(--estrelas) 0.6px,
+      transparent 0.6px);
 
   background-size: 3.4rem 3.4rem;
   background-position: 1.2rem 0.8rem;
@@ -144,10 +139,10 @@ body::before {
   pointer-events: none;
 }
 
-
 /* Órbita */
 
 body::after {
+
   content: "";
 
   position: fixed;
@@ -162,46 +157,43 @@ body::after {
 
   border-radius: 50%;
 
-  border: 1px solid rgba(23, 201, 63, 0.09);
+  border: 1px solid var(--orbita);
 
   box-shadow:
-    0 0 0 8rem rgba(23, 201, 63, 0.015) inset;
+    0 0 0 8rem var(--verde-vidro) inset;
 
   pointer-events: none;
 }
-
 
 a {
   color: inherit;
 }
 
-
 /* ============================================================
-   TIPOGRAFIA NUMÉRICA
-   ============================================================ */
+TIPOGRAFIA
+============================================================ */
 
 .numero {
+
   font-family: 'IBM Plex Mono', ui-monospace, monospace;
+
   font-variant-numeric: tabular-nums;
 }
 
-
-/* ============================================================
-   FOCO
-   ============================================================ */
-
 :focus-visible {
+
   outline: 2px solid var(--verde);
   outline-offset: 2px;
+
   border-radius: 4px;
 }
 
-
 /* ============================================================
-   MARCA
-   ============================================================ */
+MARCA
+============================================================ */
 
 .marca {
+
   display: inline-flex;
 
   align-items: center;
@@ -225,36 +217,8 @@ a {
   color: var(--verde);
 }
 
-
-.marca-selo {
-  width: 2.1rem;
-  height: 2.1rem;
-
-  flex-shrink: 0;
-
-  display: grid;
-  place-items: center;
-
-  border-radius: 50%;
-
-  background: var(--verde-escuro);
-
-  border: 1px solid rgba(23, 201, 63, 0.4);
-
-  box-shadow:
-    0 0 0 5px rgba(23, 201, 63, 0.05);
-}
-
-
-.marca-selo svg {
-  width: 1.15rem;
-  height: 1.15rem;
-
-  display: block;
-}
-
-
 .marca-tagline {
+
   font-family: 'Inter', sans-serif;
 
   font-weight: 500;
@@ -268,12 +232,12 @@ a {
   margin: 0.15rem 0 0 2.7rem;
 }
 
-
 /* ============================================================
-   TELA CENTRAL / LOGIN / LOADING
-   ============================================================ */
+LOADING
+============================================================ */
 
 .tela-central {
+
   min-height: 100vh;
 
   display: flex;
@@ -286,8 +250,8 @@ a {
   position: relative;
 }
 
-
 .cartao-login {
+
   width: 100%;
 
   max-width: 22rem;
@@ -307,10 +271,15 @@ a {
   animation: subir 0.5s ease both;
 
   position: relative;
+
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
-
 .cartao-login::before {
+
   content: "";
 
   position: absolute;
@@ -322,11 +291,9 @@ a {
   padding: 1px;
 
   background:
-    linear-gradient(
-      160deg,
+    linear-gradient(160deg,
       rgba(23, 201, 63, 0.35),
-      transparent 40%
-    );
+      transparent 40%);
 
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
@@ -339,19 +306,19 @@ a {
   pointer-events: none;
 }
 
-
 .cartao-login .marca {
+
   justify-content: center;
 
   margin: 0 auto 1.5rem;
 }
 
-
 /* ============================================================
-   ANIMAÇÕES
-   ============================================================ */
+ANIMAÇÕES
+============================================================ */
 
 @keyframes subir {
+
   from {
     opacity: 0;
     transform: translateY(8px);
@@ -363,15 +330,15 @@ a {
   }
 }
 
-
 @keyframes girar {
+
   to {
     transform: rotate(360deg);
   }
 }
 
-
 .spinner {
+
   width: 1.9rem;
   height: 1.9rem;
 
@@ -383,12 +350,11 @@ a {
 
   border-radius: 50%;
 
-  animation:
-    girar 0.8s linear infinite;
+  animation: girar 0.8s linear infinite;
 }
 
-
 @media (prefers-reduced-motion: reduce) {
+
   .spinner {
     animation-duration: 1.6s;
   }
@@ -398,8 +364,8 @@ a {
   }
 }
 
-
 .status-texto {
+
   color: var(--texto-suave);
 
   font-size: 0.9rem;
@@ -407,62 +373,12 @@ a {
   margin: 0;
 }
 
-
 /* ============================================================
-   LOGIN - ERRO
-   ============================================================ */
-
-.status-erro {
-  display: none;
-}
-
-
-.cartao-login.erro .spinner,
-.cartao-login.erro .status-ok {
-  display: none;
-}
-
-
-.cartao-login.erro .status-erro {
-  display: block;
-}
-
-
-.cartao-login.erro::before {
-  background:
-    linear-gradient(
-      160deg,
-      rgba(241, 101, 95, 0.35),
-      transparent 40%
-    );
-}
-
-
-.status-erro strong {
-  display: block;
-
-  color: var(--vermelho);
-
-  font-size: 0.95rem;
-
-  margin-bottom: 0.4rem;
-}
-
-
-.status-erro p {
-  color: var(--texto-suave);
-
-  font-size: 0.85rem;
-
-  margin: 0;
-}
-
-
-/* ============================================================
-   DASHBOARD
-   ============================================================ */
+DASHBOARD
+============================================================ */
 
 .pagina {
+
   max-width: 46rem;
 
   margin: 0 auto;
@@ -472,12 +388,12 @@ a {
   position: relative;
 }
 
-
 /* ============================================================
-   HEADER
-   ============================================================ */
+HEADER
+============================================================ */
 
 .topo {
+
   display: flex;
 
   align-items: flex-start;
@@ -487,8 +403,8 @@ a {
   margin-bottom: 2.25rem;
 }
 
-
 .acoes-topo {
+
   display: flex;
 
   align-items: center;
@@ -496,12 +412,12 @@ a {
   gap: 0.55rem;
 }
 
-
 /* ============================================================
-   BOTÃO SAIR
-   ============================================================ */
+BOTÃO SAIR
+============================================================ */
 
 .sair {
+
   display: inline-flex;
 
   align-items: center;
@@ -531,11 +447,11 @@ a {
   transition:
     border-color 0.15s ease,
     color 0.15s ease,
-    background 0.15s ease;
+    background-color 0.15s ease;
 }
 
-
 .sair::before {
+
   content: "";
 
   width: 0.4rem;
@@ -546,40 +462,40 @@ a {
   background: var(--texto-fraco);
 
   transition:
-    background 0.15s ease;
+    background-color 0.15s ease;
 }
 
-
 .sair:hover {
+
   color: var(--texto);
 
   border-color: var(--linha-forte);
 
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--hover-botao-sair);
 }
-
 
 .sair:hover::before {
   background: var(--vermelho);
 }
 
-
 /* ============================================================
-   RESUMO
-   ============================================================ */
+RESUMO
+============================================================ */
 
 .resumo {
+
   display: grid;
 
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
 
   gap: 1rem;
 
   margin-bottom: 1.75rem;
 }
 
-
 .resumo-item {
+
   background: var(--bg-carta);
 
   border: 1px solid var(--linha);
@@ -591,20 +507,23 @@ a {
   position: relative;
 
   overflow: hidden;
-}
 
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
 
 .resumo-item.destaque {
+
   background:
-    linear-gradient(
-      155deg,
+    linear-gradient(155deg,
       var(--bg-carta) 55%,
-      var(--verde-escuro) 190%
-    );
+      var(--verde-escuro) 190%);
 }
 
-
 .resumo-item.destaque::after {
+
   content: "";
 
   position: absolute;
@@ -617,11 +536,11 @@ a {
 
   border-radius: 50%;
 
-  border: 1px solid rgba(23, 201, 63, 0.22);
+  border: 1px solid var(--orbita);
 }
 
-
 .resumo-item .rotulo {
+
   font-size: 0.72rem;
 
   font-weight: 600;
@@ -637,8 +556,8 @@ a {
   position: relative;
 }
 
-
 .resumo-item .valor {
+
   font-size: 1.9rem;
 
   font-weight: 500;
@@ -650,19 +569,19 @@ a {
   letter-spacing: -0.01em;
 }
 
-
 .resumo-item.destaque .valor {
+
   color: var(--verde-forte);
 
   font-size: 2.1rem;
 }
 
-
 /* ============================================================
-   SEÇÕES
-   ============================================================ */
+SEÇÕES
+============================================================ */
 
 .secao {
+
   background: var(--bg-carta);
 
   border: 1px solid var(--linha);
@@ -672,10 +591,15 @@ a {
   padding: 1.6rem 1.6rem 1.7rem;
 
   margin-bottom: 1.25rem;
+
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
-
 .secao h2 {
+
   display: flex;
 
   align-items: center;
@@ -695,8 +619,8 @@ a {
   color: var(--texto);
 }
 
-
 .secao h2::before {
+
   content: "";
 
   width: 0.4rem;
@@ -712,12 +636,12 @@ a {
   flex-shrink: 0;
 }
 
-
 /* ============================================================
-   CONTAS
-   ============================================================ */
+CONTAS
+============================================================ */
 
 .contas-lista {
+
   display: grid;
 
   grid-template-columns:
@@ -728,8 +652,8 @@ a {
   margin-bottom: 1.25rem;
 }
 
-
 .conta-card {
+
   background: var(--bg-campo);
 
   border: 1px solid var(--linha);
@@ -740,18 +664,19 @@ a {
 
   transition:
     border-color 0.15s ease,
+    background-color 0.25s ease,
     transform 0.15s ease;
 }
 
-
 .conta-card:hover {
+
   border-color: var(--linha-forte);
 
   transform: translateY(-1px);
 }
 
-
 .conta-card-topo {
+
   display: flex;
 
   align-items: center;
@@ -763,13 +688,12 @@ a {
   margin-bottom: 0.7rem;
 }
 
-
 .conta-icone {
   font-size: 1.1rem;
 }
 
-
 .conta-tipo {
+
   color: var(--texto-suave);
 
   font-size: 0.7rem;
@@ -781,8 +705,8 @@ a {
   text-align: right;
 }
 
-
 .conta-card h3 {
+
   margin: 0 0 0.4rem;
 
   font-family: 'Manrope', sans-serif;
@@ -792,8 +716,8 @@ a {
   font-weight: 700;
 }
 
-
 .conta-saldo {
+
   margin: 0;
 
   color: var(--verde-forte);
@@ -805,12 +729,12 @@ a {
   font-weight: 500;
 }
 
-
 /* ============================================================
-   COMPRAS
-   ============================================================ */
+COMPRAS
+============================================================ */
 
 .recibo {
+
   list-style: none;
 
   margin: 0;
@@ -818,8 +742,8 @@ a {
   padding: 0;
 }
 
-
 .recibo li {
+
   display: flex;
 
   justify-content: space-between;
@@ -835,50 +759,19 @@ a {
   border-radius: 8px;
 
   transition:
-    background 0.15s ease;
+    background-color 0.15s ease;
 }
-
 
 .recibo li:hover {
-  background: rgba(255, 255, 255, 0.025);
+  background: var(--hover-superficie);
 }
-
 
 .recibo li:last-child {
   border-bottom: none;
 }
 
-
-.recibo .produto {
-  font-weight: 500;
-
-  color: var(--texto);
-}
-
-
-.recibo .meta {
-  color: var(--texto-suave);
-
-  font-size: 0.78rem;
-
-  display: block;
-
-  margin-top: 0.15rem;
-}
-
-
-.recibo .valor {
-  white-space: nowrap;
-
-  font-weight: 500;
-
-  color: var(--texto);
-}
-
-
-/* Compatibilidade com renderização atual */
-
 .compra-item {
+
   display: flex;
 
   align-items: center;
@@ -892,15 +785,21 @@ a {
   border-bottom: 1px dashed var(--linha);
 
   border-radius: 8px;
+
+  transition:
+    background-color 0.15s ease;
 }
 
+.compra-item:hover {
+  background: var(--hover-superficie);
+}
 
 .compra-item:last-child {
   border-bottom: none;
 }
 
-
 .compra-info {
+
   display: flex;
 
   flex-direction: column;
@@ -910,20 +809,19 @@ a {
   min-width: 0;
 }
 
-
 .compra-info strong {
   font-size: 0.9rem;
 }
 
-
 .compra-info span {
+
   color: var(--texto-suave);
 
   font-size: 0.78rem;
 }
 
-
 .compra-valor {
+
   white-space: nowrap;
 
   font-family: 'IBM Plex Mono', monospace;
@@ -931,12 +829,12 @@ a {
   font-size: 0.88rem;
 }
 
-
 /* ============================================================
-   ESTADO VAZIO
-   ============================================================ */
+ESTADO VAZIO
+============================================================ */
 
 .vazio {
+
   color: var(--texto-suave);
 
   font-size: 0.88rem;
@@ -946,12 +844,12 @@ a {
   padding: 1.75rem 1rem 1.25rem;
 }
 
-
 /* ============================================================
-   FORMULÁRIOS
-   ============================================================ */
+FORMULÁRIOS
+============================================================ */
 
 .form-linha {
+
   display: grid;
 
   grid-template-columns:
@@ -960,9 +858,10 @@ a {
   gap: 0.6rem;
 }
 
-
 .form-linha input,
-.form-linha select {
+.form-linha select,
+.form-categoria input {
+
   font: inherit;
 
   padding: 0.65rem 0.8rem;
@@ -977,33 +876,47 @@ a {
 
   transition:
     border-color 0.15s ease,
-    background 0.15s ease;
+    background-color 0.25s ease,
+    color 0.25s ease;
 }
 
-
-.form-linha input::placeholder {
+.form-linha input::placeholder,
+.form-categoria input::placeholder {
   color: var(--texto-fraco);
 }
 
-
 .form-linha input:focus,
-.form-linha select:focus {
+.form-linha select:focus,
+.form-categoria input:focus {
+
   background: var(--bg-campo-foco);
 
   border-color: rgba(23, 201, 63, 0.5);
+
+  outline: none;
 }
 
+/*
+
+* Importante:
+* não usamos mais "color-scheme: dark" aqui.
+* O select acompanha o tema do documento.
+  */
 
 .form-linha select {
-  color-scheme: dark;
+  color-scheme: inherit;
 }
 
+html[data-theme="light"] .form-linha select {
+  color-scheme: light;
+}
 
 /* ============================================================
-   BOTÕES
-   ============================================================ */
+BOTÕES
+============================================================ */
 
 .botao {
+
   font: inherit;
 
   font-weight: 600;
@@ -1023,30 +936,29 @@ a {
   cursor: pointer;
 
   transition:
-    background 0.15s ease,
+    background-color 0.15s ease,
     transform 0.1s ease,
     box-shadow 0.15s ease;
 }
 
-
 .botao:hover {
+
   background: var(--verde-forte);
 
   box-shadow:
     0 0 0 4px var(--verde-vidro);
 }
 
-
 .botao:active {
   transform: translateY(1px);
 }
 
-
 /* ============================================================
-   ERROS DOS FORMULÁRIOS
-   ============================================================ */
+ERROS
+============================================================ */
 
 .form-erro {
+
   color: var(--vermelho);
 
   font-size: 0.82rem;
@@ -1056,12 +968,12 @@ a {
   min-height: 1.1em;
 }
 
-
 /* ============================================================
-   CATEGORIAS
-   ============================================================ */
+CATEGORIAS
+============================================================ */
 
 .categorias-lista {
+
   display: flex;
 
   flex-wrap: wrap;
@@ -1071,15 +983,9 @@ a {
   margin-bottom: 1.1rem;
 }
 
-
-/*
- * Seu JavaScript usa "categoria-item".
- * Mantemos também "categoria-chip" caso queira
- * utilizar essa classe futuramente.
- */
-
 .categoria-item,
 .categoria-chip {
+
   font-size: 0.8rem;
 
   font-weight: 500;
@@ -1095,24 +1001,23 @@ a {
   border: 1px solid rgba(23, 201, 63, 0.3);
 }
 
-
 .form-categoria {
+
   display: flex;
 
   gap: 0.6rem;
 }
 
-
 .form-categoria input {
   flex: 1;
 }
 
-
 /* ============================================================
-   ALTERNADOR DE TEMA
-   ============================================================ */
+ALTERNADOR DE TEMA
+============================================================ */
 
 .tema-toggle {
+
   width: 2.35rem;
   height: 2.35rem;
 
@@ -1137,12 +1042,12 @@ a {
   transition:
     color 0.2s ease,
     border-color 0.2s ease,
-    background 0.2s ease,
+    background-color 0.2s ease,
     transform 0.2s ease;
 }
 
-
 .tema-toggle:hover {
+
   color: var(--verde);
 
   border-color: rgba(23, 201, 63, 0.35);
@@ -1152,45 +1057,42 @@ a {
   transform: translateY(-1px);
 }
 
-
 .tema-toggle:active {
   transform: translateY(0);
 }
 
-
 .tema-toggle .icone-tema {
+
   line-height: 1;
 
   transition:
     transform 0.25s ease;
 }
 
-
 .tema-toggle:hover .icone-tema {
   transform: rotate(12deg);
 }
 
-
 /* ============================================================
-   TEMA CLARO
-   ============================================================ */
+RESPONSIVIDADE
+============================================================ */
 
-html[data-theme="light"] body::before {
-  opacity: 0.035;
+@media (max-width: 48rem) {
+
+  .resumo {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .form-linha {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .form-linha .botao {
+    width: 100%;
+  }
 }
-
-
-html[data-theme="light"] body::after {
-  border-color: rgba(17, 173, 53, 0.10);
-
-  box-shadow:
-    0 0 0 8rem rgba(17, 173, 53, 0.018) inset;
-}
-
-
-/* ============================================================
-   RESPONSIVIDADE
-   ============================================================ */
 
 @media (max-width: 30rem) {
 
@@ -1199,39 +1101,53 @@ html[data-theme="light"] body::after {
       2rem 1rem 3rem;
   }
 
-
   .resumo {
     grid-template-columns: 1fr;
   }
-
 
   .contas-lista {
     grid-template-columns: 1fr;
   }
 
-
   .form-linha {
     grid-template-columns: 1fr;
   }
-
 
   .form-categoria {
     flex-direction: column;
   }
 
-
   .acoes-topo {
     gap: 0.4rem;
   }
 
-
   .tema-toggle {
+
     width: 2.25rem;
     height: 2.25rem;
+    
   }
-
 
   .topo {
     align-items: center;
+  }
+}
+
+/* ============================================================
+REDUÇÃO DE MOVIMENTO
+============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+
+    scroll-behavior: auto !important;
+
+    transition-duration: 0.01ms !important;
+
+    animation-duration: 0.01ms !important;
+    
   }
 }

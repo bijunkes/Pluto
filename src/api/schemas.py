@@ -24,8 +24,21 @@ class CompraOut(BaseModel):
     id: int
     produto: str
     categoria: str
+    conta: str
     valor: float
     data: datetime
+
+
+class CompraUpdate(BaseModel):
+    """
+    Dados para editar uma compra existente.
+    Todos os campos são opcionais.
+    """
+
+    produto: str | None = Field(default=None, min_length=1)
+    categoria: str | None = Field(default=None, min_length=1)
+    contaId: int | None = Field(default=None, gt=0)
+    valor: float | None = Field(default=None, ge=0)
 
 
 # ============================================================
@@ -41,6 +54,11 @@ class CategoriaOut(BaseModel):
 
     id: int
     nome: str
+
+
+class CategoriaUpdate(BaseModel):
+
+    nome: str = Field(..., min_length=1)
 
 
 # ============================================================
@@ -64,6 +82,30 @@ class ContaOut(BaseModel):
     tipo: str
     saldo: float
     ativa: bool
+
+
+class ContaUpdate(BaseModel):
+    """
+    Dados para atualizar uma conta existente.
+    Ambos os campos são opcionais.
+    """
+
+    nome: str | None = Field(default=None, min_length=1)
+    tipo: str | None = Field(default=None, min_length=1)
+
+
+class MovimentacaoSaldo(BaseModel):
+    """
+    Depósito ou retirada manual de saldo de uma conta.
+    """
+
+    valor: float = Field(..., gt=0)
+
+
+class TransferenciaSaldo(BaseModel):
+
+    contaDestinoId: int = Field(..., gt=0)
+    valor: float = Field(..., gt=0)
 
 
 # ============================================================
@@ -102,3 +144,15 @@ class SessaoOut(BaseModel):
     """
 
     usuario_id: int
+
+
+# ============================================================
+# INSIGHTS
+# ============================================================
+
+class InsightOut(BaseModel):
+
+    id: str
+    type: str
+    title: str
+    description: str

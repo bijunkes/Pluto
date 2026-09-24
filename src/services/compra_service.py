@@ -1,3 +1,6 @@
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from src.services.ia_service import IAService
 from src.database.database import Database
 
@@ -20,17 +23,25 @@ class CompraService:
 
     def processar_compra(self, mensagem, imagem_path=None):
         """
-        Analisa uma compra utilizando o Gemini.
+        Analisa uma compra utilizando a IA e define
+        a data e hora da compra.
         """
 
         resultado = self.ia.analisar_mensagem(
-            mensagem=mensagem, imagem_path=imagem_path
+            mensagem=mensagem,
+            imagem_path=imagem_path
         )
+
+        # Define a data/hora informada ou usa o momento atual
+        resultado = self._completar_data_hora(resultado)
 
         print("\nCompra identificada:")
         print(f"Produto: {resultado['produto']}")
         print(f"Categoria: {resultado['categoria']}")
         print(f"Valor: R$ {resultado['valor']:.2f}")
+        print(
+            f"Data: {resultado['data_compra'].strftime('%d/%m/%Y às %H:%M')}"
+        )
 
         return resultado
 
@@ -46,6 +57,7 @@ class CompraService:
             categoria=resultado["categoria"],
             conta_id=conta_id,
             valor=resultado["valor"],
+            data_compra=resultado["data_compra"],
         )
 
         print("\nCompra salva com sucesso!")
@@ -64,6 +76,7 @@ class CompraService:
             categoria=categoria,
             conta_id=conta_id,
             valor=resultado["valor"],
+            data_compra=resultado["data_compra"],
         )
 
     # =========================================================
@@ -117,14 +130,21 @@ class CompraService:
         Adiciona uma nova conta para o usuário.
         """
 
-        return self.database.adicionar_conta(nome=nome, tipo=tipo, saldo=saldo)
+        return self.database.adicionar_conta(
+            nome=nome,
+            tipo=tipo,
+            saldo=saldo
+        )
 
     # =========================================================
     # HISTÓRICO DE COMPRAS
     # =========================================================
 
     def listar_compras(self, data_inicio=None, data_fim=None):
-        return self.database.listar_compras(data_inicio=data_inicio, data_fim=data_fim)
+        return self.database.listar_compras(
+            data_inicio=data_inicio,
+            data_fim=data_fim
+        )
 
     def buscar_compra(self, compra_id):
         return self.database.buscar_compra(compra_id)
@@ -144,3 +164,69 @@ class CompraService:
         compras = self.database.listar_compras()
 
         return sum(compra[4] for compra in compras)
+
+    # =========================================================
+    # DATA E HORA
+    # =========================================================
+
+    def _completar_data_hora(self, resultado):
+        """
+        Define a data e hora da compra.
+
+        Se a IA identificar uma data/hora informada pelo usuário,
+        utiliza esses valores.
+
+        Caso contrário, utiliza a data e/ou hora atuais.
+
+        Exemplos:
+
+        "Comprei ontem às 18:30"
+            -> ontem às 18:30
+
+        "Comprei ontem"
+            -> ontem no horário atual
+
+        "Comprei às 18:30"
+            -> hoje às 18:30
+
+        "Comprei agora"
+            -> data e hora atuais
+        """
+
+        agora = datetime.now(
+            ZoneInfo("America/Sao_Paulo")
+        )
+
+        data = resultado.get("data_compra")
+        hora = resultado.get("hora_compra")
+
+        # Se não foi informada uma data, usa hoje
+        if not data:
+            data = agora.strftime("%Y-%m-%d")
+
+        # Se não foi informada uma hora, usa a hora atual
+        if not hora:
+            hora = agora.strftime("%H:%M")
+
+        try:
+            data_hora = datetime.strptime(
+                f"{data} {hora}",
+                "%Y-%m-%d %H:%M"
+            )
+
+            # Adiciona o fuso horário de São Paulo
+            data_hora = data_hora.replace(
+                tzinfo=ZoneInfo("America/Sao_Paulo")
+            )
+
+        except ValueError:
+            # Se a IA retornar algo inválido,
+            # utiliza o momento atual.
+            data_hora = agora.replace(
+                second=0,
+                microsecond=0
+            )
+
+        resultado["data_compra"] = data_hora
+
+        return resultado
