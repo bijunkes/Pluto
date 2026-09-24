@@ -4,6 +4,8 @@ import time
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from src.config.categorias import CATEGORIAS
 from src.services.exceptions import AnaliseIAError
@@ -44,6 +46,8 @@ class GeminiService:
     * produto: objeto comprado
     * categoria: categoria geral do produto
     * valor: preço pago
+    * data_compra: data em que a compra aconteceu, se informada pelo usuário
+    * hora_compra: horário em que a compra aconteceu, se informado pelo usuário
 
     Categorias disponíveis:
     {categorias_disponiveis}
@@ -59,6 +63,20 @@ class GeminiService:
     7. Se não conseguir identificar produto, use "Não informado".
     8. Se não conseguir identificar o valor, use 0.
     9. O valor deve ser um número decimal.
+    Data e hora atual:
+    {datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%Y-%m-%d %H:%M")}
+
+    Regras para data e hora:
+
+    10. Se o usuário informar uma data, converta para o formato YYYY-MM-DD.
+    11. Se o usuário usar expressões como "hoje", "ontem" ou "anteontem",
+        interprete com base na data atual fornecida acima.
+    12. Se o usuário informar uma hora, converta para o formato HH:MM.
+    13. Expressões como "às 18h", "18 horas", "18:30" devem ser convertidas
+        para HH:MM.
+    14. Se o usuário NÃO informar a data, retorne null em data_compra.
+    15. Se o usuário NÃO informar a hora, retorne null em hora_compra.
+    16. NÃO invente data ou hora.
     """
 
         contents = []
@@ -69,16 +87,11 @@ class GeminiService:
                     imagem = f.read()
 
                 contents.append(
-                    types.Part.from_bytes(
-                        data=imagem,
-                        mime_type="image/jpeg"
-                    )
+                    types.Part.from_bytes(data=imagem, mime_type="image/jpeg")
                 )
 
             except Exception as e:
-                raise AnaliseIAError(
-                    f"Erro ao ler a imagem enviada: {str(e)}"
-                )
+                raise AnaliseIAError(f"Erro ao ler a imagem enviada: {str(e)}")
 
         contents.append(prompt)
 
@@ -101,11 +114,19 @@ class GeminiService:
                                     "produto": types.Schema(type="STRING"),
                                     "categoria": types.Schema(type="STRING"),
                                     "valor": types.Schema(type="NUMBER"),
+                                    "data_compra": types.Schema(
+                                        type="STRING", nullable=True
+                                    ),
+                                    "hora_compra": types.Schema(
+                                        type="STRING", nullable=True
+                                    ),
                                 },
                                 required=[
                                     "produto",
                                     "categoria",
-                                    "valor"
+                                    "valor",
+                                    "data_compra",
+                                    "hora_compra",
                                 ],
                             ),
                         ),
@@ -117,11 +138,7 @@ class GeminiService:
 
                     erro = str(e)
 
-                    if (
-                        "503" in erro
-                        or "UNAVAILABLE" in erro
-                        or "high demand" in erro
-                    ):
+                    if "503" in erro or "UNAVAILABLE" in erro or "high demand" in erro:
 
                         if tentativa < max_tentativas - 1:
 
@@ -141,18 +158,14 @@ class GeminiService:
 
             resultado = extrair_json(response.text)
 
-            validar_resultado_compra(
-                resultado,
-                self.categorias
-            )
+            validar_resultado_compra(resultado, self.categorias)
 
             return resultado
 
         except Exception as e:
 
             raise AnaliseIAError(
-                "Não foi possível se comunicar com o Gemini. "
-                f"Detalhes: {str(e)}"
+                "Não foi possível se comunicar com o Gemini. " f"Detalhes: {str(e)}"
             ) from e
 
     def gerar_insight(self, dados):
@@ -202,6 +215,5 @@ Escreva o insight em português do Brasil.
         except Exception as e:
 
             raise AnaliseIAError(
-                "Não foi possível gerar o insight pelo Gemini. "
-                f"Detalhes: {str(e)}"
+                "Não foi possível gerar o insight pelo Gemini. " f"Detalhes: {str(e)}"
             ) from e

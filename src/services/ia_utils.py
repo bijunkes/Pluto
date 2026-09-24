@@ -1,59 +1,77 @@
 import json
 import re
+from datetime import datetime
 
 from src.services.exceptions import AnaliseIAError
+
+
+def extrair_valor_monetario_br(texto):
+    """Extrai o último valor monetário usando separadores do padrão brasileiro."""
+    if not isinstance(texto, str):
+        return None
+
+    padrao_valor = re.compile(
+        r"(?<![\d.,])(?:R\$\s*)?"
+        r"(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:,\d{1,2})?)"
+        r"(?![\d.,])",
+        re.IGNORECASE,
+    )
+    encontrados = padrao_valor.findall(texto)
+    if not encontrados:
+        return None
+
+    valor = encontrados[-1]
+    if "," in valor:
+        valor = valor.replace(".", "").replace(",", ".")
+    elif "." in valor:
+        valor = valor.replace(".", "")
+
+    return float(valor)
 
 
 def extrair_json(texto):
     """
     Extrai um objeto JSON de um texto retornado por um modelo de IA.
 
-    Alguns modelos (especialmente rodando localmente via Ollama)
-    não retornam um JSON puro: podem envolver a resposta em blocos
+    Alguns modelos podem envolver a resposta em blocos
     ```json ... ``` ou adicionar frases antes/depois do objeto.
     Esta função tenta lidar com esses casos antes de desistir.
     """
 
     if not texto or not texto.strip():
-
         raise AnaliseIAError("A IA retornou uma resposta vazia.")
 
     texto = texto.strip()
 
     # Tenta o caminho direto: o texto já é um JSON válido
     try:
-
         return json.loads(texto)
 
     except json.JSONDecodeError:
-
         pass
 
-    # Remove blocos de código markdown (```json ... ``` ou ``` ... ```)
+    # Remove blocos de código markdown
     texto_sem_blocos = re.sub(
-        r"^```(?:json)?\s*|\s*```$", "", texto, flags=re.IGNORECASE | re.MULTILINE
+        r"^```(?:json)?\s*|\s*```$",
+        "",
+        texto,
+        flags=re.IGNORECASE | re.MULTILINE,
     ).strip()
 
     try:
-
         return json.loads(texto_sem_blocos)
 
     except json.JSONDecodeError:
-
         pass
 
-    # Última tentativa: procura o primeiro objeto "{ ... }" no texto,
-    # caso a IA tenha adicionado alguma explicação junto da resposta
+    # Última tentativa: procura o primeiro objeto JSON
     match = re.search(r"\{.*\}", texto, flags=re.DOTALL)
 
     if match:
-
         try:
-
             return json.loads(match.group(0))
 
         except json.JSONDecodeError as e:
-
             raise AnaliseIAError(
                 "Não foi possível interpretar o JSON retornado pela IA."
             ) from e
@@ -63,39 +81,127 @@ def extrair_json(texto):
 
 def validar_resultado_compra(resultado, categorias):
     """
-    Garante que o dicionário retornado pela IA tem os campos
-    'produto', 'categoria' e 'valor' com os tipos corretos.
+    Valida o resultado retornado pela IA.
 
-    Se a categoria identificada não estiver entre as categorias
-    conhecidas, cai em "Outros" em vez de quebrar o fluxo.
+    Campos obrigatórios:
+    - produto
+    - categoria
+    - valor
+
+    Campos opcionais:
+    - data_compra
+    - hora_compra
+
+    Data e hora só são preenchidas quando identificadas
+    na mensagem do usuário. Caso contrário, permanecem como None
+    para que o CompraService possa utilizar a data/hora atual.
     """
 
     if not isinstance(resultado, dict):
-
         raise AnaliseIAError("A resposta da IA não é um objeto JSON.")
 
-    campos_obrigatorios = ("produto", "categoria", "valor")
+    campos_obrigatorios = (
+        "produto",
+        "categoria",
+        "valor",
+    )
 
     for campo in campos_obrigatorios:
-
         if campo not in resultado:
+            raise AnaliseIAError(
+                f"A resposta da IA não contém o campo '{campo}'."
+            )
 
-            raise AnaliseIAError(f"A resposta da IA não contém o campo '{campo}'.")
+    # ---------------------------------------------------------
+    # VALOR
+    # ---------------------------------------------------------
 
     try:
-
         resultado["valor"] = float(resultado["valor"])
 
     except (TypeError, ValueError) as e:
+        raise AnaliseIAError(
+            "O valor retornado pela IA não é um número válido."
+        ) from e
 
-        raise AnaliseIAError("O valor retornado pela IA não é um número válido.") from e
+    # ---------------------------------------------------------
+    # PRODUTO
+    # ---------------------------------------------------------
 
-    if not isinstance(resultado["produto"], str) or not resultado["produto"].strip():
+    if (
+        not isinstance(resultado["produto"], str)
+        or not resultado["produto"].strip()
+    ):
+        raise AnaliseIAError("Não foi possível identificar o produto da compra.")
 
-        resultado["produto"] = "Não informado"
+    produto_normalizado = resultado["produto"].strip().casefold()
+    if produto_normalizado in {"não informado", "nao informado"}:
+
+        raise AnaliseIAError("Não foi possível identificar o produto da compra.")
+
+    if resultado["valor"] <= 0:
+
+        raise AnaliseIAError("O valor da compra deve ser maior que zero.")
+
+    # ---------------------------------------------------------
+    # CATEGORIA
+    # ---------------------------------------------------------
 
     if resultado["categoria"] not in categorias:
-
         resultado["categoria"] = "Outros"
+
+    # ---------------------------------------------------------
+    # DATA DA COMPRA
+    # ---------------------------------------------------------
+
+    data_compra = resultado.get("data_compra")
+
+    if data_compra in ("", "null", "None"):
+        data_compra = None
+
+    if data_compra is not None:
+
+        if not isinstance(data_compra, str):
+            raise AnaliseIAError(
+                "A data da compra retornada pela IA não é válida."
+            )
+
+        try:
+            datetime.strptime(data_compra, "%Y-%m-%d")
+
+        except ValueError as e:
+            raise AnaliseIAError(
+                "A data da compra retornada pela IA não está "
+                "no formato YYYY-MM-DD."
+            ) from e
+
+    resultado["data_compra"] = data_compra
+
+    # ---------------------------------------------------------
+    # HORA DA COMPRA
+    # ---------------------------------------------------------
+
+    hora_compra = resultado.get("hora_compra")
+
+    if hora_compra in ("", "null", "None"):
+        hora_compra = None
+
+    if hora_compra is not None:
+
+        if not isinstance(hora_compra, str):
+            raise AnaliseIAError(
+                "A hora da compra retornada pela IA não é válida."
+            )
+
+        try:
+            datetime.strptime(hora_compra, "%H:%M")
+
+        except ValueError as e:
+            raise AnaliseIAError(
+                "A hora da compra retornada pela IA não está "
+                "no formato HH:MM."
+            ) from e
+
+    resultado["hora_compra"] = hora_compra
 
     return resultado

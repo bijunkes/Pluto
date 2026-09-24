@@ -1,6 +1,15 @@
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 class InsightService:
+
+    FUSO = ZoneInfo("America/Sao_Paulo")
+
+    @classmethod
+    def agora(cls):
+        # O banco armazena datas sem timezone; mantemos o horário brasileiro
+        # como datetime ingênuo para as comparações existentes.
+        return datetime.now(cls.FUSO).replace(tzinfo=None)
 
     def __init__(self, database):
         self.database = database
@@ -123,7 +132,7 @@ class InsightService:
         comparando com as 24 horas anteriores.
         """
 
-        agora = datetime.now()
+        agora = self.agora()
 
         inicio_atual = agora - timedelta(days=1)
         fim_atual = agora
@@ -157,7 +166,7 @@ class InsightService:
         comparando com a semana anterior.
         """
 
-        agora = datetime.now()
+        agora = self.agora()
 
         inicio_atual = agora - timedelta(days=7)
         fim_atual = agora
@@ -191,7 +200,7 @@ class InsightService:
         comparando com o mês anterior.
         """
 
-        agora = datetime.now()
+        agora = self.agora()
 
         inicio_atual = agora.replace(
             day=1,
@@ -358,6 +367,10 @@ class InsightService:
             frequencia
         )
 
+    def configurar_horario(self, horario):
+        """Configura o horário diário/semanal dos insights."""
+        self.database.atualizar_horario_insights(horario)
+
     def obter_configuracao(self):
         """
         Retorna a configuração atual dos insights.
@@ -388,10 +401,6 @@ class InsightService:
         return self.preparar_dados_para_ia(analise)
 
     def deve_gerar_insight(self, agora=None):
-        """
-        Verifica se está na hora de gerar um insight automático.
-        """
-
         configuracao = self.obter_configuracao()
 
         if configuracao is None:
@@ -406,55 +415,201 @@ class InsightService:
             return False
 
         if agora is None:
-            agora = datetime.now()
+            agora = self._agora_local()
 
         horario_configurado = configuracao["horario"]
-
         ultimo_envio = configuracao["ultimo_envio"]
 
-        # Primeiro envio:
-        # só pode acontecer depois do horário configurado.
+        # Garante que horario_configurado seja time
+        if hasattr(horario_configurado, "hour"):
+            horario_configurado = horario_configurado.replace(
+                second=0,
+                microsecond=0
+            )
+
+        # ---------------------------------------------------------
+        # PRIMEIRO ENVIO
+        # ---------------------------------------------------------
         if ultimo_envio is None:
             return agora.time() >= horario_configurado
 
-        # =========================
-        # INSIGHT DIÁRIO
-        # =========================
+        # ---------------------------------------------------------
+        # DIÁRIO
+        # ---------------------------------------------------------
         if frequencia == "DIARIO":
-            mesma_data = ultimo_envio.date() == agora.date()
-
-            if mesma_data:
-                return False
-
-            return agora.time() >= horario_configurado
-
-        # =========================
-        # INSIGHT SEMANAL
-        # =========================
-        if frequencia == "SEMANAL":
-            # Segunda-feira = 0
-            inicio_semana = agora - timedelta(
-                days=agora.weekday()
-            )
-
-            inicio_semana = inicio_semana.replace(
-                hour=0,
-                minute=0,
+            horario_envio_hoje = agora.replace(
+                hour=horario_configurado.hour,
+                minute=horario_configurado.minute,
                 second=0,
-                microsecond=0,
+                microsecond=0
             )
 
-            ultimo_envio_na_semana = (
-                ultimo_envio >= inicio_semana
-            )
-
-            if ultimo_envio_na_semana:
+            # Ainda não chegou o horário configurado
+            if agora < horario_envio_hoje:
                 return False
 
-            # O insight semanal só é enviado na segunda-feira.
-            if agora.weekday() != 0:
+            # Já enviou hoje no horário ou depois dele
+            if (
+                ultimo_envio.date() == agora.date()
+                and ultimo_envio >= horario_envio_hoje
+            ):
+                return False
+
+            return True
+
+        # ---------------------------------------------------------
+        # SEMANAL
+        # ---------------------------------------------------------
+        if frequencia == "SEMANAL":
+
+            dias_desde_envio = (agora.date() - ultimo_envio.date()).days
+
+            if dias_desde_envio < 7:
                 return False
 
             return agora.time() >= horario_configurado
 
         return False
+
+    # =========================================================
+    # INSIGHTS DO DASHBOARD (texto pronto, sem chamar a IA)
+    # =========================================================
+
+    @staticmethod
+    def _formatar_moeda(valor):
+        return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    def _insights_de_padroes(self, padroes, prefixo_id, secao):
+        """
+        Converte padrões estruturados (vindos de identificar_padroes)
+        em textos amigáveis, já classificados por seção do dashboard
+        (habito, comparativo, alerta ou recomendacao).
+        """
+
+        resultado = []
+
+        for indice, padrao in enumerate(padroes):
+
+            tipo = padrao["tipo"]
+
+            if tipo == "aumento_total":
+                resultado.append({
+                    "id": f"{prefixo_id}-{indice}",
+                    "type": "comparativo",
+                    "title": "Seus gastos subiram",
+                    "description": (
+                        f"Percebi que você gastou {abs(padrao['variacao']):.0f}% a mais "
+                        f"nesse {secao} do que no período anterior "
+                        f"({self._formatar_moeda(padrao['valor_atual'])} contra "
+                        f"{self._formatar_moeda(padrao['valor_anterior'])})."
+                    ),
+                })
+
+            elif tipo == "reducao_total":
+                resultado.append({
+                    "id": f"{prefixo_id}-{indice}",
+                    "type": "habito",
+                    "title": "Seus gastos caíram",
+                    "description": (
+                        f"Boa! Você gastou {abs(padrao['variacao']):.0f}% a menos "
+                        f"nesse {secao} do que no período anterior "
+                        f"({self._formatar_moeda(padrao['valor_atual'])} contra "
+                        f"{self._formatar_moeda(padrao['valor_anterior'])})."
+                    ),
+                })
+
+            elif tipo == "nova_categoria":
+                resultado.append({
+                    "id": f"{prefixo_id}-{indice}",
+                    "type": "habito",
+                    "title": f"Nova categoria: {padrao['categoria']}",
+                    "description": (
+                        f"Percebi um novo tipo de gasto — "
+                        f"{self._formatar_moeda(padrao['valor_atual'])} em "
+                        f"{padrao['categoria']} nesse {secao}."
+                    ),
+                })
+
+            elif tipo == "aumento_categoria":
+                variacao = padrao["variacao"]
+                grave = variacao >= 30
+                resultado.append({
+                    "id": f"{prefixo_id}-{indice}",
+                    "type": "alerta" if grave else "habito",
+                    "title": f"{padrao['categoria']} em alta",
+                    "description": (
+                        ("Talvez valha observar: " if grave else "Percebi que ")
+                        + f"seus gastos com {padrao['categoria']} subiram {variacao:.0f}% "
+                        f"nesse {secao}, indo de "
+                        f"{self._formatar_moeda(padrao['valor_anterior'])} para "
+                        f"{self._formatar_moeda(padrao['valor_atual'])}."
+                        + (" Se esse padrão continuar, pode valer a pena revisar essa categoria." if grave else "")
+                    ),
+                })
+
+            elif tipo == "reducao_categoria":
+                resultado.append({
+                    "id": f"{prefixo_id}-{indice}",
+                    "type": "habito",
+                    "title": f"{padrao['categoria']} em queda",
+                    "description": (
+                        f"Você reduziu {abs(padrao['variacao']):.0f}% os gastos com "
+                        f"{padrao['categoria']} nesse {secao}, indo de "
+                        f"{self._formatar_moeda(padrao['valor_anterior'])} para "
+                        f"{self._formatar_moeda(padrao['valor_atual'])}."
+                    ),
+                })
+
+        return resultado
+
+    def montar_insights_dashboard(self):
+        """
+        Monta a lista de insights exibida na página de Insights do
+        dashboard, combinando a análise semanal e a mensal.
+
+        Não depende de chamadas à IA: os textos são gerados a partir
+        dos padrões já calculados a partir dos dados reais do usuário,
+        o que mantém a página rápida e sem custo de API.
+        """
+
+        insights = []
+
+        try:
+            analise_semanal = self.gerar_analise_semanal()
+            padroes_semanal = self.identificar_padroes(analise_semanal)
+            insights.extend(
+                self._insights_de_padroes(padroes_semanal, "semanal", "últimos 7 dias")
+            )
+        except Exception:
+            pass
+
+        try:
+            analise_mensal = self.gerar_analise_mensal()
+            padroes_mensal = self.identificar_padroes(analise_mensal)
+            insights.extend(
+                self._insights_de_padroes(padroes_mensal, "mensal", "mês")
+            )
+
+            categorias_atual = analise_mensal["atual"]["categorias"]
+            total_atual = analise_mensal["atual"]["total"]
+
+            if categorias_atual and total_atual > 0:
+
+                maior = max(categorias_atual, key=lambda item: item["total"])
+                percentual = (maior["total"] / total_atual) * 100
+
+                if percentual >= 35:
+                    insights.append({
+                        "id": "recomendacao-concentracao",
+                        "type": "recomendacao",
+                        "title": "Gastos concentrados",
+                        "description": (
+                            f"Quase {percentual:.0f}% do que você gastou este mês foi em "
+                            f"{maior['categoria']}. Talvez valha observar se esse é o "
+                            "equilíbrio que você gostaria de ter entre as categorias."
+                        ),
+                    })
+        except Exception:
+            pass
+
+        return insights

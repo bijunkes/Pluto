@@ -3,6 +3,24 @@ from __future__ import annotations
 from .base import Skill, SkillInfo, padrao
 
 
+class ConsultarGastosMesSkill(Skill):
+    info = SkillInfo(
+        "consultar_gastos_mes",
+        "Informa o total gasto pelo usuario no mes atual.",
+        ("quanto eu gastei esse mes?", "qual foi meu total de gastos neste mes?"),
+    )
+    prioridade = 60
+    padroes = (
+        padrao(r"\bquanto\b.*\b(gastei|gasto|gastos|despesas)\b.*\bmes\b"),
+        padrao(r"\bquanto\b.*\bmes\b.*\b(gastei|gasto|gastos|despesas)\b"),
+        padrao(r"\b(total|valor)\b.*\b(gasto|gastos|despesas)\b.*\bmes\b"),
+        padrao(r"\b(gastos|despesas)\b.*\b(este|neste|nesse)\s+mes\b"),
+    )
+
+    async def executar(self, bot, update, context):
+        await bot.consultar_gastos_mes_atual(update, context)
+
+
 class ListarComprasSkill(Skill):
     info = SkillInfo(
         "listar_compras", "Lista e filtra as compras registradas.",
@@ -84,6 +102,29 @@ class AjudaSkill(Skill):
         await bot.help(update, context)
 
 
+class IniciarRegistroCompraSkill(Skill):
+    info = SkillInfo(
+        "iniciar_registro_compra",
+        "Inicia o fluxo guiado para registrar uma compra.",
+        ("quero registrar uma compra", "adicione uma despesa"),
+    )
+    prioridade = 55
+    padroes = (
+        padrao(
+            r"\b(quero|preciso|gostaria de|vamos|pode)\b.*"
+            r"\b(registrar|cadastrar|adicionar|anotar|incluir)\b.*"
+            r"\b(compra|gasto|despesa)\b"
+        ),
+        padrao(
+            r"\b(registrar|cadastrar|adicionar|anotar|incluir)\b.*"
+            r"\b(compra|gasto|despesa)\b$"
+        ),
+    )
+
+    async def executar(self, bot, update, context):
+        await bot.iniciar_registro_compra(update, context)
+
+
 class RegistrarCompraSkill(Skill):
     info = SkillInfo(
         "registrar_compra", "Entende uma compra e prepara seu registro.",
@@ -115,6 +156,7 @@ class PlanejarEconomiaSkill(Skill):
 
 
 SKILLS_PADRAO = (
+    ConsultarGastosMesSkill,
     PlanejarEconomiaSkill,
     CriarCategoriaSkill,
     CriarContaSkill,
@@ -122,5 +164,6 @@ SKILLS_PADRAO = (
     ListarContasSkill,
     DashboardSkill,
     AjudaSkill,
+    IniciarRegistroCompraSkill,
     RegistrarCompraSkill,
 )
