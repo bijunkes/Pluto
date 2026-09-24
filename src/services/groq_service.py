@@ -1,5 +1,7 @@
 import os
 import json
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 from groq import Groq
@@ -43,6 +45,11 @@ Identifique SOMENTE:
 * produto: objeto comprado
 * categoria: categoria geral do produto
 * valor: preço pago
+* data_compra: data da compra, se informada
+* hora_compra: horário da compra, se informado
+
+Data e hora atual:
+{datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%Y-%m-%d %H:%M")}
 
 Categorias disponíveis:
 {categorias_disponiveis}
@@ -59,12 +66,26 @@ Regras:
 8. Se não conseguir identificar o valor, use 0.
 9. O valor deve ser um número decimal.
 
+Regras para data e hora:
+
+10. Se o usuário informar uma data, converta para o formato YYYY-MM-DD.
+11. Se o usuário usar expressões como "hoje", "ontem" ou "anteontem",
+    interprete com base na data atual fornecida acima.
+12. Se o usuário informar uma hora, converta para o formato HH:MM.
+13. Expressões como "às 18h", "18 horas", "18:30" devem ser convertidas
+    para HH:MM.
+14. Se o usuário NÃO informar a data, retorne null em data_compra.
+15. Se o usuário NÃO informar a hora, retorne null em hora_compra.
+16. NÃO invente data ou hora.
+
 Retorne SOMENTE um JSON válido neste formato:
 
 {{
     "produto": "nome do produto",
     "categoria": "categoria",
-    "valor": 0.0
+    "valor": 0.0,
+    "data_compra": null,
+    "hora_compra": null
 }}
 """
 
@@ -142,6 +163,5 @@ Escreva o insight em português do Brasil.
         except Exception as e:
 
             raise AnaliseIAError(
-                "Não foi possível gerar o insight pelo Groq. "
-                f"Detalhes: {str(e)}"
+                "Não foi possível gerar o insight pelo Groq. " f"Detalhes: {str(e)}"
             ) from e

@@ -3,52 +3,27 @@
 
 <head>
 
-  <meta charset="utf-8">
+  <meta charset="UTF-8" />
 
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1"
-  >
+    content="width=device-width, initial-scale=1.0"
+  />
 
-  <title>Pluto · Dashboard</title>
+  <title>Pluto · Seu assistente financeiro</title>
 
   <link
     rel="stylesheet"
     href="style.css"
   >
 
-  <script>
-
-    /*
-     * Aplica o tema antes da página aparecer.
-     * Evita o flash do tema errado.
-     */
-    (function aplicarTemaInicial() {
-
-      const salvo =
-        localStorage.getItem("pluto_tema");
-
-      const sistema =
-        window.matchMedia(
-          "(prefers-color-scheme: light)"
-        ).matches
-          ? "light"
-          : "dark";
-
-      document.documentElement.dataset.theme = salvo || sistema;
-
-    })();
-
-  </script>
-
 </head>
-
 
 <body>
 
-  <!-- =====================================================
-       TELA DE CARREGAMENTO
-       ===================================================== -->
+  <!-- ============================================================
+  TELA DE CARREGAMENTO
+  ============================================================ -->
 
   <div
     class="tela-central"
@@ -61,10 +36,7 @@
         Pluto<span>.</span>
       </p>
 
-      <div
-        class="spinner"
-        aria-hidden="true"
-      ></div>
+      <div class="spinner" aria-hidden="true"></div>
 
       <p class="status-texto">
         Carregando seu dashboard…
@@ -74,10 +46,9 @@
 
   </div>
 
-
-  <!-- =====================================================
-       DASHBOARD
-       ===================================================== -->
+  <!-- ============================================================
+  PÁGINA PRINCIPAL
+  ============================================================ -->
 
   <div
     class="pagina"
@@ -85,48 +56,37 @@
     hidden
   >
 
-    <!-- ================= HEADER ================= -->
+    <!-- CABEÇALHO -->
 
     <header class="topo">
 
       <div>
-
         <p class="marca">
           Pluto<span>.</span>
         </p>
-
         <p class="marca-tagline">
-          Seu copiloto financeiro
+          Seu assistente financeiro
         </p>
-
       </div>
-
 
       <div class="acoes-topo">
 
         <button
+          type="button"
           class="tema-toggle"
           id="btn-tema"
-          type="button"
-          aria-label="Alternar tema"
           title="Alternar tema"
         >
-
           <span
             class="icone-tema"
             id="icone-tema"
-            aria-hidden="true"
-          >
-            ☾
-          </span>
-
+          >🌙</span>
         </button>
 
-
         <button
+          type="button"
           class="sair"
           id="btn-sair"
-          type="button"
         >
           Sair
         </button>
@@ -135,64 +95,23 @@
 
     </header>
 
-
-    <!-- =================================================
-         RESUMO
-         ================================================= -->
+    <!-- RESUMO -->
 
     <section class="resumo">
 
-      <!-- TOTAL GASTO -->
-
       <div class="resumo-item destaque">
-
-        <p class="rotulo">
-          Total gasto
-        </p>
-
-        <p
-          class="valor numero"
-          id="total-gasto"
-        >
-          R$ 0,00
-        </p>
-
+        <p class="rotulo">Saldo total</p>
+        <p class="valor numero" id="saldo-total">R$ 0,00</p>
       </div>
 
-
-      <!-- COMPRAS -->
-
       <div class="resumo-item">
-
-        <p class="rotulo">
-          Compras
-        </p>
-
-        <p
-          class="valor numero"
-          id="total-compras"
-        >
-          0
-        </p>
-
+        <p class="rotulo">Total gasto</p>
+        <p class="valor numero" id="total-gasto">R$ 0,00</p>
       </div>
 
-
-      <!-- SALDO TOTAL -->
-
       <div class="resumo-item">
-
-        <p class="rotulo">
-          Saldo total
-        </p>
-
-        <p
-          class="valor numero"
-          id="saldo-total"
-        >
-          R$ 0,00
-        </p>
-
+        <p class="rotulo">Compras</p>
+        <p class="valor numero" id="total-compras">0</p>
       </div>
 
       <div class="resumo-item">
@@ -201,110 +120,64 @@
       </div>
 
       <div class="resumo-item">
-        <p class="rotulo">Projeção do mês</p>
+        <p class="rotulo">Projeção mensal</p>
         <p class="valor numero" id="projecao-mensal">R$ 0,00</p>
       </div>
 
       <div class="resumo-item">
         <p class="rotulo">Cobertura do saldo</p>
-        <p class="valor numero" id="cobertura-saldo">Sem estimativa</p>
+        <p class="valor numero" id="cobertura-saldo">—</p>
       </div>
 
       <div class="resumo-item">
         <p class="rotulo">Variação mensal</p>
-        <p class="valor numero" id="variacao-mensal">Sem comparação</p>
+        <p class="valor numero" id="variacao-mensal">—</p>
       </div>
 
       <div class="resumo-item">
         <p class="rotulo">Maior categoria</p>
-        <p class="valor numero" id="maior-categoria">Sem gastos</p>
+        <p class="valor numero" id="maior-categoria">—</p>
       </div>
 
     </section>
 
-
-    <!-- =================================================
-         CONTAS
-         ================================================= -->
+    <!-- CONTAS -->
 
     <section class="secao">
 
-      <h2>
-        Suas contas
-      </h2>
-
-
-      <!-- LISTA DE CONTAS -->
+      <h2>Contas</h2>
 
       <div
         class="contas-lista"
         id="lista-contas"
       ></div>
 
-
-      <!-- ESTADO VAZIO -->
-
       <p
         class="vazio"
         id="contas-vazio"
         hidden
       >
-        Você ainda não possui nenhuma conta.
+        Você ainda não tem contas cadastradas.
       </p>
 
-
-      <!-- ===============================================
-           CRIAR CONTA
-           =============================================== -->
-
       <form
-        id="form-conta"
         class="form-linha"
+        id="form-conta"
       >
-
-        <!-- NOME -->
 
         <input
           type="text"
           id="campo-nome-conta"
           placeholder="Nome da conta"
-          autocomplete="off"
-          maxlength="100"
           required
         >
 
-
-        <!-- TIPO -->
-
-        <select
-          id="campo-tipo-conta"
-          required
-        >
-
-          <option value="">
-            Tipo da conta
-          </option>
-
-          <option value="CARTEIRA">
-            💵 Carteira
-          </option>
-
-          <option value="CONTA_CORRENTE">
-            💳 Conta corrente
-          </option>
-
-          <option value="POUPANCA">
-            🏦 Poupança
-          </option>
-
-          <option value="INVESTIMENTO">
-            📈 Investimento
-          </option>
-
+        <select id="campo-tipo-conta">
+          <option value="CARTEIRA">Carteira</option>
+          <option value="CONTA_CORRENTE">Conta corrente</option>
+          <option value="POUPANCA">Poupança</option>
+          <option value="INVESTIMENTO">Investimento</option>
         </select>
-
-
-        <!-- SALDO INICIAL -->
 
         <input
           type="number"
@@ -312,23 +185,16 @@
           placeholder="Saldo inicial"
           step="0.01"
           min="0"
-          required
         >
-
-
-        <!-- BOTÃO -->
 
         <button
           type="submit"
           class="botao"
         >
-          Criar conta
+          Adicionar
         </button>
 
       </form>
-
-
-      <!-- ERRO -->
 
       <p
         class="form-erro"
@@ -337,23 +203,55 @@
 
     </section>
 
-
-    <!-- =================================================
-         COMPRAS
-         ================================================= -->
+    <!-- CATEGORIAS -->
 
     <section class="secao">
 
-      <h2>
-        Últimas compras
-      </h2>
+      <h2>Categorias</h2>
 
+      <div
+        class="categorias-lista"
+        id="lista-categorias"
+      ></div>
+
+      <form
+        class="form-categoria"
+        id="form-categoria"
+      >
+
+        <input
+          type="text"
+          id="campo-nova-categoria"
+          placeholder="Nova categoria"
+          required
+        >
+
+        <button
+          type="submit"
+          class="botao"
+        >
+          Adicionar
+        </button>
+
+      </form>
+
+      <p
+        class="form-erro"
+        id="categoria-erro"
+      ></p>
+
+    </section>
+
+    <!-- COMPRAS -->
+
+    <section class="secao">
+
+      <h2>Compras</h2>
 
       <ul
         class="recibo"
         id="lista-compras"
       ></ul>
-
 
       <p
         class="vazio"
@@ -361,69 +259,27 @@
         hidden
       >
         Nenhuma compra registrada ainda.
-        Manda uma pro bot!
       </p>
 
-    </section>
-
-
-    <!-- =================================================
-         REGISTRAR COMPRA
-         ================================================= -->
-
-    <section class="secao">
-
-      <h2>
-        Registrar compra
-      </h2>
-
-
       <form
-        id="form-compra"
         class="form-linha"
+        id="form-compra"
       >
-
-        <!-- PRODUTO -->
 
         <input
           type="text"
           id="campo-produto"
           placeholder="Produto"
-          autocomplete="off"
-          maxlength="100"
           required
         >
 
-
-        <!-- CATEGORIA -->
-
-        <select
-          id="campo-categoria"
-          required
-        >
-
-          <option value="">
-            Selecione uma categoria
-          </option>
-
+        <select id="campo-categoria" required>
+          <option value="">Selecione uma categoria</option>
         </select>
 
-
-        <!-- CONTA -->
-
-        <select
-          id="campo-conta"
-          required
-        >
-
-          <option value="">
-            Selecione uma conta
-          </option>
-
+        <select id="campo-conta" required>
+          <option value="">Selecione uma conta</option>
         </select>
-
-
-        <!-- VALOR -->
 
         <input
           type="number"
@@ -434,20 +290,14 @@
           required
         >
 
-
-        <!-- BOTÃO -->
-
         <button
           type="submit"
           class="botao"
         >
-          Salvar
+          Registrar
         </button>
 
       </form>
-
-
-      <!-- ERRO -->
 
       <p
         class="form-erro"
@@ -456,68 +306,7 @@
 
     </section>
 
-
-    <!-- =================================================
-         CATEGORIAS
-         ================================================= -->
-
-    <section class="secao">
-
-      <h2>
-        Categorias
-      </h2>
-
-
-      <!-- LISTA -->
-
-      <div
-        class="categorias-lista"
-        id="lista-categorias"
-      ></div>
-
-
-      <!-- CRIAR CATEGORIA -->
-
-      <form
-        id="form-categoria"
-        class="form-categoria"
-      >
-
-        <input
-          type="text"
-          id="campo-nova-categoria"
-          placeholder="Nova categoria"
-          autocomplete="off"
-          maxlength="100"
-          required
-        >
-
-
-        <button
-          type="submit"
-          class="botao"
-        >
-          Criar
-        </button>
-
-      </form>
-
-
-      <!-- ERRO -->
-
-      <p
-        class="form-erro"
-        id="categoria-erro"
-      ></p>
-
-    </section>
-
   </div>
-
-
-  <!-- =====================================================
-       JAVASCRIPT
-       ===================================================== -->
 
   <script src="app.js"></script>
 

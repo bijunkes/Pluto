@@ -1,6 +1,8 @@
 import os
 
 import psycopg
+from decimal import Decimal
+from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -329,6 +331,90 @@ class Database:
 
                 return cursor.fetchone()[0]
 
+    def atualizar_conta(self, conta_id, nome=None, tipo=None):
+        """
+        Atualiza nome e/ou tipo de uma conta do usuário.
+        """
+
+        campos = []
+        parametros = []
+
+        if nome is not None:
+            nome = nome.strip()
+            if not nome:
+                raise ValueError("O nome da conta não pode ser vazio.")
+            campos.append("nome = %s")
+            parametros.append(nome)
+
+        if tipo is not None:
+            tipo = tipo.strip().upper()
+            if not tipo:
+                raise ValueError("O tipo da conta não pode ser vazio.")
+            campos.append("tipo = %s")
+            parametros.append(tipo)
+
+        if not campos:
+            return
+
+        parametros.extend([conta_id, self.usuario_id])
+
+        with self.conectar() as conn:
+
+            with conn.cursor() as cursor:
+
+                if nome is not None:
+                    cursor.execute(
+                        """
+                        SELECT id
+                        FROM contas
+                        WHERE LOWER(nome) = LOWER(%s)
+                        AND telegram_id = %s
+                        AND id != %s
+                        LIMIT 1
+                        """,
+                        (nome, self.usuario_id, conta_id),
+                    )
+
+                    if cursor.fetchone() is not None:
+                        raise ValueError(f"A conta '{nome}' já existe.")
+
+                cursor.execute(
+                    f"""
+                    UPDATE contas
+                    SET {', '.join(campos)}
+                    WHERE id = %s
+                    AND telegram_id = %s
+                    AND ativa = TRUE
+                    """,
+                    parametros,
+                )
+
+                if cursor.rowcount == 0:
+                    raise ValueError("Conta não encontrada ou inativa.")
+
+    def desativar_conta(self, conta_id):
+        """
+        Desativa (exclusão lógica) uma conta do usuário.
+        """
+
+        with self.conectar() as conn:
+
+            with conn.cursor() as cursor:
+
+                cursor.execute(
+                    """
+                    UPDATE contas
+                    SET ativa = FALSE
+                    WHERE id = %s
+                    AND telegram_id = %s
+                    AND ativa = TRUE
+                    """,
+                    (conta_id, self.usuario_id),
+                )
+
+                if cursor.rowcount == 0:
+                    raise ValueError("Conta não encontrada ou já inativa.")
+
     def conta_existe(self, nome):
         """
         Verifica se uma conta ativa existe
@@ -387,11 +473,110 @@ class Database:
 
                     raise ValueError("Conta não encontrada ou inativa.")
 
+    def adicionar_saldo_conta(self, conta_id, valor):
+        """Adiciona dinheiro manualmente ao saldo de uma conta."""
+        valor = Decimal(str(valor))
+        if valor <= 0:
+            raise ValueError("O valor deve ser maior que zero.")
+
+        with self.conectar() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    UPDATE contas
+                    SET saldo = saldo + %s
+                    WHERE id = %s
+                    AND telegram_id = %s
+                    AND ativa = TRUE
+                    """,
+                    (valor, conta_id, self.usuario_id),
+                )
+                if cursor.rowcount == 0:
+                    raise ValueError("Conta não encontrada ou inativa.")
+
+    def retirar_saldo_conta(self, conta_id, valor):
+        """Retira dinheiro manualmente do saldo de uma conta."""
+        valor = Decimal(str(valor))
+        if valor <= 0:
+            raise ValueError("O valor deve ser maior que zero.")
+
+        with self.conectar() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    UPDATE contas
+                    SET saldo = saldo - %s
+                    WHERE id = %s
+                    AND telegram_id = %s
+                    AND ativa = TRUE
+                    """,
+                    (valor, conta_id, self.usuario_id),
+                )
+                if cursor.rowcount == 0:
+                    raise ValueError("Conta não encontrada ou inativa.")
+
+    def transferir_saldo(self, conta_origem_id, conta_destino_id, valor):
+        """Transfere dinheiro entre duas contas ativas do mesmo usuário."""
+        valor = Decimal(str(valor))
+        if valor <= 0:
+            raise ValueError("O valor deve ser maior que zero.")
+        if conta_origem_id == conta_destino_id:
+            raise ValueError("A conta de origem e a conta de destino devem ser diferentes.")
+
+        with self.conectar() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, saldo, ativa
+                    FROM contas
+                    WHERE id IN (%s, %s)
+                    AND telegram_id = %s
+                    ORDER BY id
+                    FOR UPDATE
+                    """,
+                    (conta_origem_id, conta_destino_id, self.usuario_id),
+                )
+                contas = {row[0]: row for row in cursor.fetchall()}
+
+                origem = contas.get(conta_origem_id)
+                destino = contas.get(conta_destino_id)
+
+                if origem is None or destino is None:
+                    raise ValueError("Uma das contas não foi encontrada.")
+                if not origem[2] or not destino[2]:
+                    raise ValueError("As duas contas precisam estar ativas.")
+
+                cursor.execute(
+                    """
+                    UPDATE contas
+                    SET saldo = saldo - %s
+                    WHERE id = %s
+                    AND telegram_id = %s
+                    AND ativa = TRUE
+                    """,
+                    (valor, conta_origem_id, self.usuario_id),
+                )
+                if cursor.rowcount == 0:
+                    raise ValueError("Não foi possível debitar a conta de origem.")
+
+                cursor.execute(
+                    """
+                    UPDATE contas
+                    SET saldo = saldo + %s
+                    WHERE id = %s
+                    AND telegram_id = %s
+                    AND ativa = TRUE
+                    """,
+                    (valor, conta_destino_id, self.usuario_id),
+                )
+                if cursor.rowcount == 0:
+                    raise ValueError("Não foi possível creditar a conta de destino.")
+
     # =========================================================
     # COMPRAS
     # =========================================================
 
-    def salvar_compra(self, produto, categoria, conta_id, valor):
+    def salvar_compra(self, produto, categoria, conta_id, valor, data_compra=None):
         """
         Salva uma compra associada a uma categoria e a uma
         conta pertencentes ao usuário.
@@ -427,18 +612,20 @@ class Database:
                         produto,
                         categoria_id,
                         conta_id,
-                        valor
+                        valor,
+                        data
                     )
                     VALUES (
                         %s,
                         %s,
                         %s,
                         %s,
-                        %s
+                        %s,
+                        COALESCE(%s, CURRENT_TIMESTAMP)
                     )
                     RETURNING id
                     """,
-                    (self.usuario_id, produto, categoria_id, conta_id, valor),
+                    (self.usuario_id, produto, categoria_id, conta_id, valor, data_compra),
                 )
 
                 compra_id = cursor.fetchone()[0]
@@ -605,6 +792,213 @@ class Database:
                     (valor, conta_id, self.usuario_id),
                 )
 
+    def buscar_compra_detalhada(self, compra_id):
+        """Retorna os dados da compra incluindo os IDs de categoria e conta."""
+        with self.conectar() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT
+                        compras.id,
+                        compras.produto,
+                        compras.categoria_id,
+                        categorias.nome,
+                        compras.conta_id,
+                        contas.nome,
+                        compras.valor,
+                        compras.data
+                    FROM compras
+                    JOIN categorias ON compras.categoria_id = categorias.id
+                    JOIN contas ON compras.conta_id = contas.id
+                    WHERE compras.id = %s
+                    AND compras.telegram_id = %s
+                    """,
+                    (compra_id, self.usuario_id),
+                )
+                return cursor.fetchone()
+
+    def atualizar_compra(
+        self,
+        compra_id,
+        produto=None,
+        categoria_id=None,
+        conta_id=None,
+        valor=None,
+        data_compra=None,
+    ):
+        """Atualiza uma compra e ajusta os saldos das contas atomicamente."""
+        with self.conectar() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT categoria_id, conta_id, valor
+                    FROM compras
+                    WHERE id = %s AND telegram_id = %s
+                    FOR UPDATE
+                    """,
+                    (compra_id, self.usuario_id),
+                )
+                atual = cursor.fetchone()
+                if atual is None:
+                    raise ValueError("Compra não encontrada.")
+
+                antiga_categoria, antiga_conta, antigo_valor = atual
+                nova_categoria = antiga_categoria if categoria_id is None else categoria_id
+                nova_conta = antiga_conta if conta_id is None else conta_id
+                novo_valor = antigo_valor if valor is None else valor
+
+                cursor.execute(
+                    """
+                    SELECT id, tipo, telegram_id
+                    FROM categorias
+                    WHERE id = %s
+                    AND (tipo = 'PADRAO' OR (tipo = 'PERSONALIZADA' AND telegram_id = %s))
+                    """,
+                    (nova_categoria, self.usuario_id),
+                )
+                if cursor.fetchone() is None:
+                    raise ValueError("Categoria não encontrada.")
+
+                cursor.execute(
+                    """
+                    SELECT id, ativa
+                    FROM contas
+                    WHERE id = %s AND telegram_id = %s
+                    """,
+                    (nova_conta, self.usuario_id),
+                )
+                conta_nova = cursor.fetchone()
+                if conta_nova is None:
+                    raise ValueError("Conta não encontrada.")
+                if not conta_nova[1]:
+                    raise ValueError("A conta está inativa.")
+
+                if novo_valor < 0:
+                    raise ValueError("O valor da compra não pode ser negativo.")
+
+                if antiga_conta == nova_conta:
+                    diferenca = antigo_valor - novo_valor
+                    if diferenca:
+                        cursor.execute(
+                            """
+                            UPDATE contas
+                            SET saldo = saldo + %s
+                            WHERE id = %s AND telegram_id = %s
+                            """,
+                            (diferenca, antiga_conta, self.usuario_id),
+                        )
+                else:
+                    cursor.execute(
+                        """
+                        UPDATE contas
+                        SET saldo = saldo + %s
+                        WHERE id = %s AND telegram_id = %s
+                        """,
+                        (antigo_valor, antiga_conta, self.usuario_id),
+                    )
+                    if cursor.rowcount == 0:
+                        raise ValueError("Conta anterior não encontrada.")
+                    cursor.execute(
+                        """
+                        UPDATE contas
+                        SET saldo = saldo - %s
+                        WHERE id = %s AND telegram_id = %s AND ativa = TRUE
+                        """,
+                        (novo_valor, nova_conta, self.usuario_id),
+                    )
+                    if cursor.rowcount == 0:
+                        raise ValueError("Nova conta não encontrada ou inativa.")
+
+                campos = ["categoria_id = %s", "conta_id = %s", "valor = %s"]
+                parametros = [nova_categoria, nova_conta, novo_valor]
+                if produto is not None:
+                    produto = produto.strip()
+                    if not produto:
+                        raise ValueError("O produto não pode ser vazio.")
+                    campos.append("produto = %s")
+                    parametros.append(produto)
+                if data_compra is not None:
+                    campos.append("data = %s")
+                    parametros.append(data_compra)
+
+                parametros.extend([compra_id, self.usuario_id])
+                cursor.execute(
+                    f"UPDATE compras SET {', '.join(campos)} WHERE id = %s AND telegram_id = %s",
+                    parametros,
+                )
+                if cursor.rowcount == 0:
+                    raise ValueError("Compra não encontrada.")
+
+    def buscar_categoria_por_id(self, categoria_id):
+        with self.conectar() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, nome, tipo, telegram_id
+                    FROM categorias
+                    WHERE id = %s
+                    AND (tipo = 'PADRAO' OR (tipo = 'PERSONALIZADA' AND telegram_id = %s))
+                    """,
+                    (categoria_id, self.usuario_id),
+                )
+                return cursor.fetchone()
+
+    def atualizar_categoria(self, categoria_id, nome):
+        nome = nome.strip()
+        if not nome:
+            raise ValueError("O nome da categoria não pode ser vazio.")
+        with self.conectar() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT tipo, telegram_id FROM categorias WHERE id = %s",
+                    (categoria_id,),
+                )
+                categoria = cursor.fetchone()
+                if categoria is None:
+                    raise ValueError("Categoria não encontrada.")
+                if categoria[0] != "PERSONALIZADA" or categoria[1] != self.usuario_id:
+                    raise ValueError("Categorias padrão não podem ser alteradas.")
+                cursor.execute(
+                    """
+                    SELECT id FROM categorias
+                    WHERE LOWER(nome) = LOWER(%s)
+                    AND (tipo = 'PADRAO' OR (tipo = 'PERSONALIZADA' AND telegram_id = %s))
+                    AND id != %s
+                    LIMIT 1
+                    """,
+                    (nome, self.usuario_id, categoria_id),
+                )
+                if cursor.fetchone() is not None:
+                    raise ValueError(f"A categoria '{nome}' já existe.")
+                cursor.execute(
+                    "UPDATE categorias SET nome = %s WHERE id = %s AND telegram_id = %s AND tipo = 'PERSONALIZADA'",
+                    (nome, categoria_id, self.usuario_id),
+                )
+                if cursor.rowcount == 0:
+                    raise ValueError("Categoria não encontrada.")
+
+    def excluir_categoria(self, categoria_id):
+        with self.conectar() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT tipo, telegram_id, nome FROM categorias WHERE id = %s",
+                    (categoria_id,),
+                )
+                categoria = cursor.fetchone()
+                if categoria is None:
+                    raise ValueError("Categoria não encontrada.")
+                if categoria[0] != "PERSONALIZADA" or categoria[1] != self.usuario_id:
+                    raise ValueError("Categorias padrão não podem ser excluídas.")
+                cursor.execute("SELECT COUNT(*) FROM compras WHERE categoria_id = %s", (categoria_id,))
+                if cursor.fetchone()[0] > 0:
+                    raise ValueError("Esta categoria está sendo usada por compras. Altere a categoria dessas compras antes de excluí-la.")
+                cursor.execute(
+                    "DELETE FROM categorias WHERE id = %s AND telegram_id = %s AND tipo = 'PERSONALIZADA'",
+                    (categoria_id, self.usuario_id),
+                )
+                if cursor.rowcount == 0:
+                    raise ValueError("Categoria não encontrada.")
+
     # =========================================================
     # INSIGHTS
     # =========================================================
@@ -728,11 +1122,12 @@ class Database:
                 )
 
     def atualizar_horario_insights(self, horario):
-        """
-        Atualiza o horário preferido para receber insights.
-
-        O horário deve ser informado no formato HH:MM.
-        """
+        """Atualiza o horário preferido para receber insights no formato HH:MM."""
+        horario = str(horario).strip()
+        try:
+            horario = datetime.strptime(horario, "%H:%M").time()
+        except ValueError as exc:
+            raise ValueError("Horário inválido. Use o formato HH:MM, por exemplo 09:30.") from exc
 
         self.criar_configuracao_insights()
 
@@ -776,21 +1171,22 @@ class Database:
                 )
 
     def registrar_envio_insight(self):
-        """
-        Registra o momento do último insight enviado.
-        """
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        agora = datetime.now(
+            ZoneInfo("America/Sao_Paulo")
+        ).replace(tzinfo=None)
 
         with self.conectar() as conn:
-
             with conn.cursor() as cursor:
-
                 cursor.execute(
                     """
                     UPDATE configuracoes_insights
-                    SET ultimo_envio = CURRENT_TIMESTAMP
+                    SET ultimo_envio = %s
                     WHERE telegram_id = %s
                     """,
-                    (self.usuario_id,),
+                    (agora, self.usuario_id)
                 )
 
     def total_gastos_periodo(self, data_inicio, data_fim):
@@ -904,3 +1300,20 @@ class Database:
                     }
                     for resultado in resultados
                 ]
+
+    def definir_ultimo_envio_insight_teste(self, telegram_id, data_hora):
+        with psycopg.connect(
+            os.getenv("DATABASE_URL"),
+            prepare_threshold=None
+        ) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    UPDATE configuracoes_insights
+                    SET ultimo_envio = %s
+                    WHERE telegram_id = %s
+                    """,
+                    (data_hora, telegram_id)
+                )
+
+            conn.commit()
