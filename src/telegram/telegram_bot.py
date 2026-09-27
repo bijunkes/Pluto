@@ -392,7 +392,7 @@ class TelegramBot:
 
             await query.edit_message_text(
                 "Clique no botão abaixo para abrir seu dashboard.\n"
-                "Por segurança, o link expira em 5 minutos.",
+                "Por segurança, o link expira em 5 minutos.\n\n",
                 reply_markup=teclado
             )
 
@@ -431,7 +431,7 @@ class TelegramBot:
 
         await update.message.reply_text(
             "Clique no botão abaixo para abrir seu dashboard.\n"
-            "Por segurança, o link expira em 5 minutos.",
+            "Por segurança, o link expira em 5 minutos.\n\n",
             reply_markup=teclado,
         )
 

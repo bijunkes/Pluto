@@ -44,7 +44,9 @@ async function apiFetch(url, options = {}) {
 
         if (resposta.status === 401) {
 
-            window.location.href = "/login.html";
+            if (!window.location.pathname.endsWith("login.html")) {
+                window.location.href = "/login.html";
+            }
 
         }
 
@@ -1262,5 +1264,9 @@ async function inicializarDashboard() {
 
 document.addEventListener(
     "DOMContentLoaded",
-    inicializarDashboard
+    () => {
+        if (!window.location.pathname.endsWith("login.html")) {
+            inicializarDashboard();
+        }
+    }
 );

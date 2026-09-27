@@ -182,24 +182,13 @@ class CompraService:
         utiliza esses valores.
 
         Caso contrário, utiliza a data e/ou hora atuais.
-
-        Exemplos:
-
-        "Comprei ontem às 18:30"
-            -> ontem às 18:30
-
-        "Comprei ontem"
-            -> ontem no horário atual
-
-        "Comprei às 18:30"
-            -> hoje às 18:30
-
-        "Comprei agora"
-            -> data e hora atuais
         """
 
         agora = datetime.now(
             ZoneInfo("America/Sao_Paulo")
+        ).replace(
+            second=0,
+            microsecond=0
         )
 
         data = resultado.get("data_compra")
@@ -219,18 +208,10 @@ class CompraService:
                 "%Y-%m-%d %H:%M"
             )
 
-            # Adiciona o fuso horário de São Paulo
-            data_hora = data_hora.replace(
-                tzinfo=ZoneInfo("America/Sao_Paulo")
-            )
-
         except ValueError:
             # Se a IA retornar algo inválido,
             # utiliza o momento atual.
-            data_hora = agora.replace(
-                second=0,
-                microsecond=0
-            )
+            data_hora = agora
 
         resultado["data_compra"] = data_hora
 
