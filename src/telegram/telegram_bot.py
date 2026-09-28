@@ -1,9 +1,11 @@
 import os
 import asyncio
+from pathlib import Path
 
 from dotenv import load_dotenv
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.error import BadRequest
 
 from telegram.ext import (
     Application,
@@ -12,6 +14,8 @@ from telegram.ext import (
     ContextTypes,
     filters,
     CallbackQueryHandler,
+    PersistenceInput,
+    PicklePersistence,
 )
 
 from src.services.ia_service import IAService
@@ -27,6 +31,7 @@ from src.services.scheduler_service import SchedulerService
 from src.services.savings_plan_service import SavingsPlanService
 from src.services.conversation_service import ConversationService
 from src.services.financial_context_service import FinancialContextService
+from src.services.financial_summary_service import FinancialSummaryService
 from src.telegram.skills import SkillRouter
 
 
@@ -56,7 +61,20 @@ class TelegramBot:
         self.financial_context_service = FinancialContextService()
 
         # Aplicação do Telegram
-        self.app = Application.builder().token(self.token).build()
+        pasta_dados = Path(__file__).resolve().parents[2] / "data"
+        pasta_dados.mkdir(parents=True, exist_ok=True)
+        persistencia = PicklePersistence(
+            filepath=pasta_dados / "telegram_state.pickle",
+            store_data=PersistenceInput(
+                user_data=True,
+                chat_data=False,
+                bot_data=False,
+                callback_data=False,
+            ),
+        )
+        self.app = (
+            Application.builder().token(self.token).persistence(persistencia).build()
+        )
 
         # Registra todos os comandos
         self._configurar_handlers()
@@ -268,6 +286,34 @@ class TelegramBot:
             reply_markup=self._criar_menu_principal()
         )
 
+    async def _responder_callback(self, update):
+        query = getattr(update, "callback_query", None)
+        if query is None:
+            return False
+
+        try:
+            await query.answer()
+            return True
+        except BadRequest as erro:
+            detalhe = str(erro).casefold()
+            expirado = any(
+                trecho in detalhe
+                for trecho in (
+                    "query is too old",
+                    "response timeout expired",
+                    "query id is invalid",
+                )
+            )
+            if not expirado:
+                raise
+
+            mensagem = getattr(update, "effective_message", None)
+            if mensagem is not None:
+                await mensagem.reply_text(
+                    "Esse botão expirou. Use /menu para abrir opções atualizadas."
+                )
+            return False
+
     async def menu_callback(
         self,
         update: Update,
@@ -276,10 +322,7 @@ class TelegramBot:
 
         query = update.callback_query
 
-        try:
-            await query.answer()
-        except Exception as e:
-            print(f"Callback expirado ou inválido: {e}")
+        if not await self._responder_callback(update):
             return
 
         acao = query.data.split(":", 1)[1]
@@ -349,13 +392,17 @@ class TelegramBot:
 
             await query.edit_message_text(
                 "Clique no botão abaixo para abrir seu dashboard.\n"
-                "Por segurança, o link expira em 5 minutos.",
+                "Por segurança, o link expira em 5 minutos.\n\n",
                 reply_markup=teclado
             )
 
         elif acao == "categoria":
 
-            await self.criar_categoria(update, context)
+            await self.criar_categoria(update, context, callback_respondido=True)
+
+        elif acao == "categorias":
+
+            await self.listar_categorias(update, context)
 
         elif acao == "categorias":
 
@@ -388,7 +435,7 @@ class TelegramBot:
 
         await update.message.reply_text(
             "Clique no botão abaixo para abrir seu dashboard.\n"
-            "Por segurança, o link expira em 5 minutos.",
+            "Por segurança, o link expira em 5 minutos.\n\n",
             reply_markup=teclado,
         )
 
@@ -650,48 +697,30 @@ class TelegramBot:
 
         texto = update.message.text.strip()
 
-        if context.user_data.get("movimentacao_saldo"):
-            await self._receber_valor_movimentacao_saldo(update, context, texto)
-            return
-
-        if context.user_data.get("editando_compra"):
-            await self._receber_edicao_compra(update, context, texto)
-            return
-        if context.user_data.get("editando_conta"):
-            await self._receber_edicao_conta(update, context, texto)
-            return
-        if context.user_data.get("editando_categoria"):
-            await self._receber_edicao_categoria(update, context, texto)
-            return
-
-        if context.user_data.get("editando_horario_insights"):
-            await self._receber_horario_insights(update, context, texto)
-            return
-
-        if context.user_data.get("planejamento_economia"):
-            await self._continuar_planejamento_economia(update, context, texto)
-            return
-
-        skill_direta = self.skill_router.selecionar(texto)
-        if skill_direta and skill_direta.info.nome == "planejar_economia":
-            await skill_direta.executar(self, update, context)
-            return
-
-        if context.user_data.get("modo_conversa"):
-            if "entrevista_financeira" in context.user_data:
-                await self._continuar_entrevista_financeira(update, context, texto)
-                return
-            if skill_direta and skill_direta.info.nome != "registrar_compra":
-                context.user_data.pop("modo_conversa", None)
-                await skill_direta.executar(self, update, context)
-                return
-            await self._responder_conversa_financeira(update, context, texto)
+        if await self._despachar_estado_prioritario(update, context, texto):
             return
 
         # =====================================================
         # USUÁRIO ESTÁ CRIANDO UMA CONTA
         # =====================================================
 
+        if await self._continuar_criacao_conta(update, context, texto):
+            return
+
+        # =====================================================
+        # USUÁRIO ESTÁ CRIANDO UMA CATEGORIA
+        # =====================================================
+
+        if await self._continuar_criacao_categoria(update, context, texto):
+            return
+
+        # =====================================================
+        # NOVA COMPRA
+        # =====================================================
+
+        await self._receber_compra_ou_conversa(update, context, texto)
+
+    async def _continuar_criacao_conta(self, update, context, texto):
         if context.user_data.get("criando_conta"):
 
             etapa = context.user_data.get("etapa_criacao_conta")
@@ -712,8 +741,7 @@ class TelegramBot:
                         "❌ O nome da conta não pode ser vazio."
                     )
 
-                    return
-
+                    return True
                 context.user_data["nome_conta_pendente"] = texto
 
                 context.user_data["etapa_criacao_conta"] = "tipo"
@@ -748,8 +776,7 @@ class TelegramBot:
                     reply_markup=InlineKeyboardMarkup(botoes),
                 )
 
-                return
-
+                return True
             # -------------------------------------------------
             # ETAPA 2 — SALDO INICIAL
             # -------------------------------------------------
@@ -776,8 +803,7 @@ class TelegramBot:
                         parse_mode="Markdown",
                     )
 
-                    return
-
+                    return True
                 nome = context.user_data.get("nome_conta_pendente")
 
                 tipo = context.user_data.get("tipo_conta_pendente")
@@ -793,11 +819,12 @@ class TelegramBot:
 
                     context.user_data.pop("etapa_criacao_conta", None)
 
-                    return
-
+                    return True
                 try:
 
-                    service.adicionar_conta(nome=nome, tipo=tipo, saldo=saldo)
+                    await asyncio.to_thread(
+                        service.adicionar_conta, nome=nome, tipo=tipo, saldo=saldo
+                    )
 
                     # Finaliza criação da conta
                     context.user_data.pop("criando_conta", None)
@@ -819,10 +846,9 @@ class TelegramBot:
                             parse_mode="Markdown"
                         )
 
-                        return
-
+                        return True
                     # Busca novamente as contas
-                    contas = service.listar_contas()
+                    contas = await asyncio.to_thread(service.listar_contas)
 
                     botoes = []
 
@@ -852,12 +878,11 @@ class TelegramBot:
                         "Verifique se já existe uma conta com esse nome."
                     )
 
-                return
+                return True
 
-        # =====================================================
-        # USUÁRIO ESTÁ CRIANDO UMA CATEGORIA
-        # =====================================================
+        return False
 
+    async def _continuar_criacao_categoria(self, update, context, texto):
         if context.user_data.get("criando_categoria"):
 
             nome_categoria = texto
@@ -871,7 +896,7 @@ class TelegramBot:
             try:
 
                 # Cria a categoria
-                service.adicionar_categoria(nome_categoria)
+                await asyncio.to_thread(service.adicionar_categoria, nome_categoria)
 
                 # Guarda a categoria para o momento
                 # em que a conta for escolhida
@@ -886,10 +911,9 @@ class TelegramBot:
                         f"✅ Categoria '{nome_categoria}' criada."
                     )
 
-                    return
-
+                    return True
                 # Busca contas
-                contas = service.listar_contas()
+                contas = await asyncio.to_thread(service.listar_contas)
 
                 if not contas:
 
@@ -908,8 +932,7 @@ class TelegramBot:
                         reply_markup=InlineKeyboardMarkup(botoes),
                     )
 
-                    return
-
+                    return True
                 botoes = []
 
                 for conta in contas:
@@ -944,62 +967,153 @@ class TelegramBot:
                     "❌ Não foi possível criar a categoria."
                 )
 
+            return True
+
+        return False
+
+    async def _receber_compra_ou_conversa(self, update, context, texto):
+        skill = self.skill_router.selecionar(texto)
+        if skill is None:
+            await self._responder_conversa_financeira(update, context, texto)
             return
 
-        # =====================================================
-        # NOVA COMPRA
-        # =====================================================
-
-        skill = self.skill_router.selecionar(texto)
-        if skill is not None and skill.info.nome != "registrar_compra":
+        if skill.info.nome != "registrar_compra":
             await skill.executar(self, update, context)
             return
 
-        mensagem = texto
+        await self._processar_descricao_compra(update, context, texto)
 
-        usuario_id = update.effective_user.id
+    async def iniciar_registro_compra(self, update, context):
+        context.user_data["aguardando_descricao_compra"] = True
+        await update.message.reply_text(
+            "Descreva o que você quer registrar, incluindo o produto e o valor pago."
+        )
 
-        service = CompraService(usuario_id, self.ia_service)
-
+    async def _processar_descricao_compra(self, update, context, texto):
+        service = CompraService(update.effective_user.id, self.ia_service)
         await update.message.reply_text("Analisando sua compra...")
 
         try:
-
             resultado = await asyncio.to_thread(
-                service.processar_compra, mensagem=mensagem
+                service.processar_compra, mensagem=texto
             )
-
         except AnaliseIAError as e:
-
             print(f"Erro ao analisar compra (IA): {e}")
-
             await update.message.reply_text(
                 "Não consegui entender essa compra. "
                 "Tente descrever novamente, incluindo o "
                 "produto e o valor pago."
             )
-
             return
-
         except Exception as e:
-
             import traceback
 
             print(f"Erro ao analisar compra: {e}")
             traceback.print_exc()
-
             await update.message.reply_text(
                 "Não consegui analisar a compra agora. "
                 "Tente novamente em alguns segundos."
             )
-
             return
 
         await self._enviar_confirmacao(update, context, resultado)
 
+    async def consultar_gastos_mes_atual(self, update, context):
+        usuario_id = update.effective_user.id
+        service = CompraService(usuario_id, self.ia_service)
+
+        try:
+            resumo = await asyncio.to_thread(
+                FinancialSummaryService(service.database).calcular_resumo_mensal
+            )
+        except Exception as erro:
+            print(f"Erro ao consultar gastos do mes: {erro}")
+            await update.message.reply_text(
+                "Não consegui consultar seus gastos agora. Tente novamente em alguns instantes."
+            )
+            return
+
+        inicio = resumo["periodo"]["inicio"]
+        meses = (
+            "janeiro",
+            "fevereiro",
+            "março",
+            "abril",
+            "maio",
+            "junho",
+            "julho",
+            "agosto",
+            "setembro",
+            "outubro",
+            "novembro",
+            "dezembro",
+        )
+        valor = (
+            f"{resumo['total_gasto']:,.2f}"
+            .replace(",", "X")
+            .replace(".", ",")
+            .replace("X", ".")
+        )
+        quantidade = resumo["quantidade_compras"]
+        sufixo = "compra registrada" if quantidade == 1 else "compras registradas"
+
+        await update.message.reply_text(
+            f"💰 Em {meses[inicio.month - 1]} de {inicio.year}, "
+            f"você gastou R$ {valor} em {quantidade} {sufixo}."
+        )
+
+    async def _despachar_estado_prioritario(self, update, context, texto):
+        """Atende os fluxos que têm prioridade sobre cadastro e compra."""
+        if context.user_data.get("movimentacao_saldo"):
+            await self._receber_valor_movimentacao_saldo(update, context, texto)
+            return True
+
+        if context.user_data.get("editando_compra"):
+            await self._receber_edicao_compra(update, context, texto)
+            return True
+
+        if context.user_data.get("editando_conta"):
+            await self._receber_edicao_conta(update, context, texto)
+            return True
+
+        if context.user_data.get("editando_categoria"):
+            await self._receber_edicao_categoria(update, context, texto)
+            return True
+
+        if context.user_data.get("editando_horario_insights"):
+            await self._receber_horario_insights(update, context, texto)
+            return True
+
+        if context.user_data.pop("aguardando_descricao_compra", False):
+            await self._processar_descricao_compra(update, context, texto)
+            return True
+
+        if context.user_data.get("planejamento_economia"):
+            await self._continuar_planejamento_economia(update, context, texto)
+            return True
+
+        skill_direta = self.skill_router.selecionar(texto)
+        if skill_direta and skill_direta.info.nome == "planejar_economia":
+            await skill_direta.executar(self, update, context)
+            return True
+
+        if context.user_data.get("modo_conversa"):
+            if "entrevista_financeira" in context.user_data:
+                await self._continuar_entrevista_financeira(update, context, texto)
+                return True
+            if skill_direta and skill_direta.info.nome != "registrar_compra":
+                context.user_data.pop("modo_conversa", None)
+                await skill_direta.executar(self, update, context)
+                return True
+            await self._responder_conversa_financeira(update, context, texto)
+            return True
+
+        return False
+
     async def confirmar_compra(self, update, context):
         query = update.callback_query
-        await query.answer()
+        if not await self._responder_callback(update):
+            return
 
         compra = context.user_data.get("compra_pendente")
 
@@ -1010,7 +1124,7 @@ class TelegramBot:
         usuario_id = update.effective_user.id
         service = CompraService(usuario_id, self.ia_service)
 
-        contas = service.listar_contas()
+        contas = await asyncio.to_thread(service.listar_contas)
 
         # Usuário ainda não possui contas
         if not contas:
@@ -1083,7 +1197,7 @@ class TelegramBot:
 
         service = CompraService(usuario_id, self.ia_service)
 
-        compras = service.listar_compras()
+        compras = await asyncio.to_thread(service.listar_compras)
 
         if not compras:
 
@@ -1195,8 +1309,8 @@ class TelegramBot:
     ):
         query = getattr(update, "callback_query", None)
 
-        if query:
-            await query.answer()
+        if not await self._responder_callback(update):
+            return
 
         acao = query.data.split(":", 1)[1]
 
@@ -1204,7 +1318,7 @@ class TelegramBot:
 
         service = CompraService(usuario_id, self.ia_service)
 
-        compras = service.listar_compras()
+        compras = await asyncio.to_thread(service.listar_compras)
 
         if not compras:
             await query.edit_message_text(
@@ -1382,7 +1496,8 @@ class TelegramBot:
 
         query = update.callback_query
 
-        await query.answer()
+        if not await self._responder_callback(update):
+            return
 
         context.user_data.pop("compra_pendente", None)
 
@@ -1402,7 +1517,8 @@ class TelegramBot:
 
         query = update.callback_query
 
-        await query.answer()
+        if not await self._responder_callback(update):
+            return
 
         categoria = query.data.split(":", 1)[1]
 
@@ -1421,7 +1537,7 @@ class TelegramBot:
 
         service = CompraService(usuario_id, self.ia_service)
 
-        contas = service.listar_contas()
+        contas = await asyncio.to_thread(service.listar_contas)
 
         if not contas:
 
@@ -1460,14 +1576,15 @@ class TelegramBot:
 
         query = update.callback_query
 
-        await query.answer()
+        if not await self._responder_callback(update):
+            return
 
         usuario_id = update.effective_user.id
 
         # Busca as categorias do banco do usuário
         service = CompraService(usuario_id, self.ia_service)
 
-        categorias = service.listar_categorias()
+        categorias = await asyncio.to_thread(service.listar_categorias)
 
         botoes = []
 
@@ -1506,7 +1623,8 @@ class TelegramBot:
 
         query = update.callback_query
 
-        await query.answer()
+        if not await self._responder_callback(update):
+            return
 
         compra = context.user_data.get("compra_pendente")
 
@@ -1533,7 +1651,7 @@ class TelegramBot:
         try:
 
             # Verifica se a conta pertence ao usuário
-            conta = service.buscar_conta(conta_id)
+            conta = await asyncio.to_thread(service.buscar_conta, conta_id)
 
             if conta is None:
 
@@ -1553,13 +1671,16 @@ class TelegramBot:
 
             if categoria_pendente:
 
-                service.confirmar_compra_com_categoria(
-                    compra, categoria_pendente, conta_id
+                await asyncio.to_thread(
+                    service.confirmar_compra_com_categoria,
+                    compra,
+                    categoria_pendente,
+                    conta_id,
                 )
 
             else:
 
-                service.confirmar_compra(compra, conta_id)
+                await asyncio.to_thread(service.confirmar_compra, compra, conta_id)
 
             # Limpa os dados temporários
             context.user_data.pop("compra_pendente", None)
@@ -2349,15 +2470,19 @@ class TelegramBot:
                 ]),
             )
 
-    async def criar_conta(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def criar_conta(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE,
+        callback_respondido=False,
+    ):
         """
         Inicia o processo de criação de uma nova conta.
         """
 
         query = update.callback_query
 
-        if query:
-            await query.answer()
+        if query and not callback_respondido:
+            if not await self._responder_callback(update):
+                return
 
         context.user_data["criando_conta"] = True
         context.user_data["etapa_criacao_conta"] = None
@@ -2386,7 +2511,8 @@ class TelegramBot:
 
         query = update.callback_query
 
-        await query.answer()
+        if not await self._responder_callback(update):
+            return
 
         tipo = query.data.split(":", 1)[1]
 
@@ -2432,15 +2558,19 @@ class TelegramBot:
             parse_mode="Markdown",
         )
 
-    async def criar_categoria(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def criar_categoria(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE,
+        callback_respondido=False,
+    ):
         """
         Inicia o processo de criação de uma nova categoria.
         """
 
         query = getattr(update, "callback_query", None)
 
-        if query:
-            await query.answer()
+        if query and not callback_respondido:
+            if not await self._responder_callback(update):
+                return
 
         context.user_data["criando_categoria"] = True
 
@@ -2456,8 +2586,12 @@ class TelegramBot:
 
     async def listar_contas(self, update, context):
         usuario_id = update.effective_user.id
-        service = CompraService(usuario_id, self.ia_service)
-        contas = service.listar_contas()
+        service = CompraService(
+            usuario_id,
+            self.ia_service
+        )
+
+        contas = await asyncio.to_thread(service.listar_contas)
 
         if not contas:
             mensagem = (

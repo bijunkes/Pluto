@@ -2,6 +2,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from src.services.ia_service import IAService
+from src.services.ia_utils import extrair_valor_monetario_br
 from src.database.database import Database
 
 
@@ -31,6 +32,10 @@ class CompraService:
             mensagem=mensagem,
             imagem_path=imagem_path
         )
+
+        valor_informado = extrair_valor_monetario_br(mensagem)
+        if valor_informado is not None:
+            resultado["valor"] = valor_informado
 
         # Define a data/hora informada ou usa o momento atual
         resultado = self._completar_data_hora(resultado)
@@ -177,24 +182,13 @@ class CompraService:
         utiliza esses valores.
 
         Caso contrário, utiliza a data e/ou hora atuais.
-
-        Exemplos:
-
-        "Comprei ontem às 18:30"
-            -> ontem às 18:30
-
-        "Comprei ontem"
-            -> ontem no horário atual
-
-        "Comprei às 18:30"
-            -> hoje às 18:30
-
-        "Comprei agora"
-            -> data e hora atuais
         """
 
         agora = datetime.now(
             ZoneInfo("America/Sao_Paulo")
+        ).replace(
+            second=0,
+            microsecond=0
         )
 
         data = resultado.get("data_compra")
@@ -214,18 +208,10 @@ class CompraService:
                 "%Y-%m-%d %H:%M"
             )
 
-            # Adiciona o fuso horário de São Paulo
-            data_hora = data_hora.replace(
-                tzinfo=ZoneInfo("America/Sao_Paulo")
-            )
-
         except ValueError:
             # Se a IA retornar algo inválido,
             # utiliza o momento atual.
-            data_hora = agora.replace(
-                second=0,
-                microsecond=0
-            )
+            data_hora = agora
 
         resultado["data_compra"] = data_hora
 

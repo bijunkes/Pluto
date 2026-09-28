@@ -5,6 +5,30 @@ from datetime import datetime
 from src.services.exceptions import AnaliseIAError
 
 
+def extrair_valor_monetario_br(texto):
+    """Extrai o último valor monetário usando separadores do padrão brasileiro."""
+    if not isinstance(texto, str):
+        return None
+
+    padrao_valor = re.compile(
+        r"(?<![\d.,])(?:R\$\s*)?"
+        r"(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:,\d{1,2})?)"
+        r"(?![\d.,])",
+        re.IGNORECASE,
+    )
+    encontrados = padrao_valor.findall(texto)
+    if not encontrados:
+        return None
+
+    valor = encontrados[-1]
+    if "," in valor:
+        valor = valor.replace(".", "").replace(",", ".")
+    elif "." in valor:
+        valor = valor.replace(".", "")
+
+    return float(valor)
+
+
 def extrair_json(texto):
     """
     Extrai um objeto JSON de um texto retornado por um modelo de IA.
@@ -108,7 +132,16 @@ def validar_resultado_compra(resultado, categorias):
         not isinstance(resultado["produto"], str)
         or not resultado["produto"].strip()
     ):
-        resultado["produto"] = "Não informado"
+        raise AnaliseIAError("Não foi possível identificar o produto da compra.")
+
+    produto_normalizado = resultado["produto"].strip().casefold()
+    if produto_normalizado in {"não informado", "nao informado"}:
+
+        raise AnaliseIAError("Não foi possível identificar o produto da compra.")
+
+    if resultado["valor"] <= 0:
+
+        raise AnaliseIAError("O valor da compra deve ser maior que zero.")
 
     # ---------------------------------------------------------
     # CATEGORIA

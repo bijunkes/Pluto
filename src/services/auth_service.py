@@ -62,7 +62,7 @@ def gerar_link_login(usuario_id, dashboard_url=None):
         "DASHBOARD_URL", "https://girdle-unstaffed-frequency.ngrok-free.dev"
     )
 
-    return f"{base_url.rstrip('/')}/login.html?token={token}"
+    return f"{base_url.rstrip('/')}/login.html#token={token}"
 
 
 def validar_token_login(token):
