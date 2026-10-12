@@ -194,6 +194,10 @@ class TelegramBot:
     def iniciar(self):
         print("Pluto Telegram iniciado!")
 
+        self.app.job_queue.run_repeating(
+            self._executar_lembretes_gastos, interval=60, first=10,
+        )
+
         # Executa a verificação dos insights
         # periodicamente.
         self.app.job_queue.run_repeating(
@@ -262,10 +266,20 @@ class TelegramBot:
 
         return InlineKeyboardMarkup(botoes)
 
+    def _limpar_fluxos_pendentes(self, context):
+        """Encerra rascunhos ao navegar sem apagar perfil ou histórico."""
+        for chave in (
+            "aguardando_descricao_compra", "compra_pendente",
+            "categoria_pendente", "criando_categoria", "criando_conta",
+            "etapa_criacao_conta", "nome_conta_pendente", "tipo_conta_pendente",
+            "editando_compra", "editando_conta", "editando_categoria",
+            "editando_horario_insights", "movimentacao_saldo",
+            "planejamento_economia", "modo_conversa", "entrevista_financeira",
+        ):
+            context.user_data.pop(chave, None)
+
     async def start(self, update, context):
-        context.user_data.pop("planejamento_economia", None)
-        context.user_data.pop("modo_conversa", None)
-        context.user_data.pop("entrevista_financeira", None)
+        self._limpar_fluxos_pendentes(context)
         await update.message.reply_text(
             "👋 *Olá! Eu sou o Pluto.* 🐶\n\n"
             "Seu assistente inteligente para organizar "
@@ -276,11 +290,10 @@ class TelegramBot:
         )
 
     async def menu(self, update, context):
-        context.user_data.pop("planejamento_economia", None)
-        context.user_data.pop("modo_conversa", None)
-        context.user_data.pop("entrevista_financeira", None)
+        self._limpar_fluxos_pendentes(context)
         await update.message.reply_text(
             "🐶 *Menu principal*\n\n"
+            "Use /menu sempre que quiser abrir estas opções.\n"
             "O que você deseja fazer?",
             parse_mode="Markdown",
             reply_markup=self._criar_menu_principal()
@@ -329,9 +342,7 @@ class TelegramBot:
 
         if acao == "principal":
 
-            context.user_data.pop("planejamento_economia", None)
-            context.user_data.pop("modo_conversa", None)
-            context.user_data.pop("entrevista_financeira", None)
+            self._limpar_fluxos_pendentes(context)
 
             await query.edit_message_text(
                 "🐶 *Menu principal*\n\n"
@@ -341,6 +352,8 @@ class TelegramBot:
             )
 
         elif acao == "compra":
+            self._limpar_fluxos_pendentes(context)
+            context.user_data["aguardando_descricao_compra"] = True
 
             botoes = [
                 [
@@ -543,23 +556,14 @@ class TelegramBot:
         await self._enviar_confirmacao(update, context, resultado)
 
     async def _iniciar_conversa_financeira(self, update, context):
+        self._limpar_fluxos_pendentes(context)
         context.user_data["modo_conversa"] = True
-        perfil = context.user_data.get("perfil_financeiro")
-
-        if perfil:
-            texto = (
-                "💬 *Conversa com o Pluto*\n\n"
-                "Pode perguntar sobre orçamento, dívidas, economia ou investimentos."
-            )
-        else:
-            context.user_data["entrevista_financeira"] = {
-                "indice": 0,
-                "respostas": [],
-            }
-            texto = (
-                "💬 *Antes de começarmos, quero conhecer você um pouco.*\n\n"
-                + self.PERGUNTAS_ENTREVISTA[0]
-            )
+        context.user_data.pop("entrevista_financeira", None)
+        texto = (
+            "💬 *Conversa com o Pluto*\n\n"
+            "Sobre o que você quer conversar? Pode perguntar sobre finanças "
+            "ou pedir ajuda para usar o Pluto."
+        )
 
         await update.callback_query.edit_message_text(
             texto,
@@ -604,9 +608,14 @@ class TelegramBot:
                 self.financial_context_service.obter, usuario_id
             )
             dados["perfil_declarado"] = context.user_data.get("perfil_financeiro", {})
+            dados["menu_disponivel"] = [
+                botao.text
+                for linha in self._criar_menu_principal().inline_keyboard
+                for botao in linha
+            ]
             skills_conversa = tuple(
                 skill for skill in self.skill_router.skills
-                if skill.info.nome != "registrar_compra"
+                if skill.info.nome != "abrir_menu"
             )
             interpretacao = await asyncio.to_thread(
                 self.conversation_service.interpretar,
@@ -692,6 +701,12 @@ class TelegramBot:
     ):
 
         texto = update.message.text.strip()
+
+        # Um pedido explícito de menu deve sair até de um cadastro pendente.
+        skill_navegacao = self.skill_router.selecionar(texto)
+        if skill_navegacao and skill_navegacao.info.nome == "abrir_menu":
+            await self.menu(update, context)
+            return
 
         if await self._despachar_estado_prioritario(update, context, texto):
             return
@@ -969,15 +984,14 @@ class TelegramBot:
 
     async def _receber_compra_ou_conversa(self, update, context, texto):
         skill = self.skill_router.selecionar(texto)
-        if skill is None:
+        if skill is None or skill.info.nome in {
+            "registrar_compra", "iniciar_registro_compra", "planejar_economia"
+        }:
+            # Palavras de compra são candidatas, não autorização de cadastro.
             await self._responder_conversa_financeira(update, context, texto)
             return
 
-        if skill.info.nome != "registrar_compra":
-            await skill.executar(self, update, context)
-            return
-
-        await self._processar_descricao_compra(update, context, texto)
+        await skill.executar(self, update, context)
 
     async def iniciar_registro_compra(self, update, context):
         context.user_data["aguardando_descricao_compra"] = True
@@ -1089,15 +1103,12 @@ class TelegramBot:
             return True
 
         skill_direta = self.skill_router.selecionar(texto)
-        if skill_direta and skill_direta.info.nome == "planejar_economia":
-            await skill_direta.executar(self, update, context)
-            return True
 
         if context.user_data.get("modo_conversa"):
-            if "entrevista_financeira" in context.user_data:
-                await self._continuar_entrevista_financeira(update, context, texto)
-                return True
-            if skill_direta and skill_direta.info.nome != "registrar_compra":
+            context.user_data.pop("entrevista_financeira", None)
+            if skill_direta and skill_direta.info.nome not in {
+                "registrar_compra", "iniciar_registro_compra", "planejar_economia"
+            }:
                 context.user_data.pop("modo_conversa", None)
                 await skill_direta.executar(self, update, context)
                 return True
@@ -2812,6 +2823,17 @@ class TelegramBot:
             ),
             parse_mode="Markdown",
         )
+
+    async def _enviar_lembrete_gastos(self, telegram_id, mensagem):
+        await self.app.bot.send_message(chat_id=telegram_id, text=mensagem)
+
+    async def _executar_lembretes_gastos(self, context):
+        try:
+            await self.scheduler_service.processar_lembretes_gastos(
+                self._enviar_lembrete_gastos
+            )
+        except Exception as erro:
+            print(f"[SCHEDULER] Erro ao verificar lembretes: {erro}")
 
     async def _executar_scheduler(
         self,

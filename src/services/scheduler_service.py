@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -85,6 +86,21 @@ class SchedulerService:
                 print(f"[SCHEDULER] Erro no usuário {telegram_id}: {erro}")
 
         return resultados
+
+    async def processar_lembretes_gastos(self, callback_envio):
+        pendentes = await asyncio.to_thread(Database.listar_lembretes_gastos_pendentes)
+        enviados = []
+        for telegram_id, ultimo_lancamento in pendentes:
+            try:
+                await callback_envio(telegram_id, "Ei, você já lançou seus gastos?")
+                await asyncio.to_thread(
+                    Database(telegram_id).registrar_envio_lembrete_gastos,
+                    ultimo_lancamento,
+                )
+                enviados.append(telegram_id)
+            except Exception as erro:
+                print(f"[SCHEDULER] Erro no lembrete de {telegram_id}: {erro}")
+        return enviados
 
     def _listar_configuracoes(self):
         # Não existe Database global porque a classe é orientada ao usuário.

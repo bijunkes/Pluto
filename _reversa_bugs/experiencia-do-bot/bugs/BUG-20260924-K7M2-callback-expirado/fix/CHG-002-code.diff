@@ -1,0 +1,45 @@
+diff --git a/src/telegram/telegram_bot.py b/src/telegram/telegram_bot.py
+--- a/src/telegram/telegram_bot.py
++++ b/src/telegram/telegram_bot.py
+@@
++from telegram.error import BadRequest
+@@
++    async def _responder_callback(self, update):
++        query = getattr(update, "callback_query", None)
++        if query is None:
++            return False
++        try:
++            await query.answer()
++            return True
++        except BadRequest as erro:
++            detalhe = str(erro).casefold()
++            expirado = any(
++                trecho in detalhe
++                for trecho in (
++                    "query is too old",
++                    "response timeout expired",
++                    "query id is invalid",
++                )
++            )
++            if not expirado:
++                raise
++            mensagem = getattr(update, "effective_message", None)
++            if mensagem is not None:
++                await mensagem.reply_text(
++                    "Esse botão expirou. Use /menu para abrir opções atualizadas."
++                )
++            return False
+@@
+-        try:
+-            await query.answer()
+-        except Exception as e:
+-            print(f"Callback expirado ou inválido: {e}")
++        if not await self._responder_callback(update):
+             return
+@@
+-        await query.answer()
++        if not await self._responder_callback(update):
++            return
+
+O mesmo padrão será aplicado aos demais handlers que hoje chamam `query.answer()` diretamente.
+Chamadas aninhadas de criação de conta e categoria receberão `callback_respondido=True` para evitar responder duas vezes ao mesmo callback.

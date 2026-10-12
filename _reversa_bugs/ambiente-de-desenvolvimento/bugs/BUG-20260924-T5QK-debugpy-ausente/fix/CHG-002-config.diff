@@ -1,0 +1,37 @@
+diff --git a/requirements-dev.txt b/requirements-dev.txt
+--- a/requirements-dev.txt
++++ b/requirements-dev.txt
+@@
+ -r requirements.txt
+ pytest>=9.1.1
++debugpy>=1.8.0
+diff --git a/.vscode/launch.json b/.vscode/launch.json
+--- a/.vscode/launch.json
++++ b/.vscode/launch.json
+@@
+             "request": "launch",
+             "module": "main",
++            "python": "${workspaceFolder}/.venv/Scripts/python.exe",
+             "cwd": "${workspaceFolder}",
++            "envFile": "${workspaceFolder}/.env",
+             "console": "integratedTerminal",
+diff --git a/.vscode/settings.json b/.vscode/settings.json
+new file mode 100644
+--- /dev/null
++++ b/.vscode/settings.json
+@@
++{
++    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
++    "python.envFile": "${workspaceFolder}/.env"
++}
+diff --git a/.vscode/extensions.json b/.vscode/extensions.json
+new file mode 100644
+--- /dev/null
++++ b/.vscode/extensions.json
+@@
++{
++    "recommendations": [
++        "ms-python.python",
++        "ms-python.debugpy"
++    ]
++}

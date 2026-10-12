@@ -1,0 +1,34 @@
+{
+  "generated_at": "2026-09-17T20:07:06Z",
+  "project_root": "C:/E21/Projeto-Final-Entra21",
+  "languages": [
+    {"name": "Python", "extensions": [".py"], "file_count": 39},
+    {"name": "HTML", "extensions": [".html"], "file_count": 2},
+    {"name": "JavaScript", "extensions": [".js"], "file_count": 1},
+    {"name": "CSS", "extensions": [".css"], "file_count": 1}
+  ],
+  "primary_language": "Python",
+  "frameworks": [
+    {"name": "python-telegram-bot", "version": ">=22.8", "source": "requirements.txt"},
+    {"name": "FastAPI", "version": ">=0.141.1", "source": "requirements.txt"},
+    {"name": "pytest", "version": ">=9.1.1", "source": "requirements-dev.txt"}
+  ],
+  "package_manager": "pip",
+  "entry_points": [
+    {"path": "main.py", "type": "bot_entry"},
+    {"path": "src/api/main.py", "type": "api_entry"}
+  ],
+  "config_files": ["requirements.txt", "requirements-dev.txt", "pytest.ini"],
+  "database_hints": [{"path": "src/database/database.py", "type": "psycopg_access"}],
+  "test_framework": "pytest",
+  "test_file_count": 14,
+  "modules": ["telegram", "services", "api", "database", "config", "dashboard"],
+  "organization_suggestion": {
+    "granularity": "module",
+    "rationale": "O código Python está dividido principalmente em pastas de módulos dentro de src/.",
+    "signals": [
+      {"type": "top_level_module_folders", "evidence": ["src/telegram/", "src/services/", "src/api/", "src/database/"]}
+    ],
+    "features": []
+  }
+}

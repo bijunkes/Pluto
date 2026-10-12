@@ -1,0 +1,75 @@
+diff --git a/tests/test_bot_responsiveness.py b/tests/test_bot_responsiveness.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_bot_responsiveness.py
+@@
++import asyncio
++from threading import Event
++from types import SimpleNamespace
++from unittest.mock import AsyncMock, Mock
++
++from src.telegram.telegram_bot import TelegramBot
++
++
++def _mensagem_update():
++    return SimpleNamespace(
++        effective_user=SimpleNamespace(id=123),
++        callback_query=None,
++        message=SimpleNamespace(reply_text=AsyncMock()),
++    )
++
++
++def test_listar_compras_nao_bloqueia_event_loop(monkeypatch):
++    bot = TelegramBot.__new__(TelegramBot)
++    bot.ia_service = None
++    update = _mensagem_update()
++    context = SimpleNamespace(user_data={})
++    liberar_banco = Event()
++    service = Mock()
++    service.listar_compras.side_effect = lambda: (
++        [] if liberar_banco.wait(timeout=0.2) else (_ for _ in ()).throw(
++            AssertionError("event loop ficou bloqueado")
++        )
++    )
++    monkeypatch.setattr(
++        "src.telegram.telegram_bot.CompraService", Mock(return_value=service)
++    )
++
++    async def liberar_pelo_event_loop():
++        await asyncio.sleep(0.01)
++        liberar_banco.set()
++
++    async def executar():
++        await asyncio.gather(
++            bot.listar_compras(update, context),
++            liberar_pelo_event_loop(),
++        )
++
++    asyncio.run(executar())
++
++    service.listar_compras.assert_called_once_with()
++    update.message.reply_text.assert_awaited_once()
++
++
++def test_confirmar_compra_delega_consulta_de_contas(monkeypatch):
++    bot = TelegramBot.__new__(TelegramBot)
++    bot.ia_service = None
++    bot._responder_callback = AsyncMock(return_value=True)
++    query = SimpleNamespace(edit_message_text=AsyncMock())
++    update = SimpleNamespace(
++        effective_user=SimpleNamespace(id=123),
++        callback_query=query,
++    )
++    context = SimpleNamespace(user_data={"compra_pendente": {"produto": "Pão"}})
++    service = Mock()
++    service.listar_contas.return_value = []
++    monkeypatch.setattr(
++        "src.telegram.telegram_bot.CompraService", Mock(return_value=service)
++    )
++    to_thread = AsyncMock(side_effect=lambda func, *args: func(*args))
++    monkeypatch.setattr("src.telegram.telegram_bot.asyncio.to_thread", to_thread)
++
++    asyncio.run(bot.confirmar_compra(update, context))
++
++    to_thread.assert_awaited_once_with(service.listar_contas)
++    query.edit_message_text.assert_awaited_once()

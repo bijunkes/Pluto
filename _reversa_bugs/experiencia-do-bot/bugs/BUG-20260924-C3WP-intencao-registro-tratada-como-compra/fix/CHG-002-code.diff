@@ -1,0 +1,20 @@
+diff --git a/src/telegram/skills/builtin.py b/src/telegram/skills/builtin.py
+--- a/src/telegram/skills/builtin.py
++++ b/src/telegram/skills/builtin.py
+@@
++class IniciarRegistroCompraSkill(Skill):
++    # Reconhece pedidos para iniciar o cadastro, sem tratá-los como dados.
++    ...
+diff --git a/src/telegram/telegram_bot.py b/src/telegram/telegram_bot.py
+--- a/src/telegram/telegram_bot.py
++++ b/src/telegram/telegram_bot.py
+@@
++    async def iniciar_registro_compra(self, update, context):
++        context.user_data["aguardando_descricao_compra"] = True
++        await update.message.reply_text(
++            "Descreva o que você quer registrar, incluindo o produto e o valor pago."
++        )
+@@
++        if context.user_data.pop("aguardando_descricao_compra", False):
++            await self._processar_descricao_compra(update, context, texto)
++            return True

@@ -12,6 +12,16 @@ class SavingsPlanService:
         valor = valor.replace(" ", "")
         if "," in valor:
             valor = valor.replace(".", "").replace(",", ".")
+        elif "." in valor:
+            valor_sem_sinal = valor.lstrip("+-")
+            grupos = valor_sem_sinal.split(".")
+            if (
+                1 <= len(grupos[0]) <= 3
+                and grupos[0].isdigit()
+                and len(grupos) > 1
+                and all(len(grupo) == 3 and grupo.isdigit() for grupo in grupos[1:])
+            ):
+                valor = valor.replace(".", "")
         try:
             resultado = Decimal(valor)
         except InvalidOperation as erro:

@@ -1,0 +1,26 @@
+diff --git a/src/services/ia_service.py b/src/services/ia_service.py
+--- a/src/services/ia_service.py
++++ b/src/services/ia_service.py
+@@
+-import time
+-
+ from src.services.gemini_service import GeminiService
+@@
+-        ultimo_erro = None
+-        for tentativa in range(3):
+-            try:
+-                return self.gemini.analisar_mensagem(
+-                    mensagem=mensagem, imagem_path=imagem_path
+-                )
+-            except AnaliseIAError as e:
+-                ultimo_erro = e
+-                # classificação e nova espera externa
+-                ...
++        try:
++            return self.gemini.analisar_mensagem(
++                mensagem=mensagem, imagem_path=imagem_path
++            )
++        except AnaliseIAError as erro:
++            print(f"[IA] Gemini falhou: {erro}")
+
+O bloco de fallback para Groq permanece inalterado. O GeminiService continua responsável pelas três tentativas internas de erros 503.

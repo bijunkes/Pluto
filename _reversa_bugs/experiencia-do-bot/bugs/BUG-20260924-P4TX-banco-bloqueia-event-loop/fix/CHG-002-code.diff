@@ -1,0 +1,28 @@
+diff --git a/src/telegram/telegram_bot.py b/src/telegram/telegram_bot.py
+--- a/src/telegram/telegram_bot.py
++++ b/src/telegram/telegram_bot.py
+@@
+-        compras = service.listar_compras()
++        compras = await asyncio.to_thread(service.listar_compras)
+@@
+-        contas = service.listar_contas()
++        contas = await asyncio.to_thread(service.listar_contas)
+@@
+-        categorias = service.listar_categorias()
++        categorias = await asyncio.to_thread(service.listar_categorias)
+@@
+-        conta = service.buscar_conta(conta_id)
++        conta = await asyncio.to_thread(service.buscar_conta, conta_id)
+@@
+-        service.adicionar_categoria(nome_categoria)
++        await asyncio.to_thread(service.adicionar_categoria, nome_categoria)
+@@
+-        service.adicionar_conta(nome=nome, tipo=tipo, saldo=saldo)
++        await asyncio.to_thread(
++            service.adicionar_conta, nome=nome, tipo=tipo, saldo=saldo
++        )
+@@
+-        service.confirmar_compra(compra, conta_id)
++        await asyncio.to_thread(service.confirmar_compra, compra, conta_id)
+
+O mesmo padrão será aplicado às 13 chamadas síncronas de CompraService encontradas nos handlers do Telegram. Chamadas de análise de IA que já usam asyncio.to_thread não serão alteradas.

@@ -3,6 +3,30 @@ from __future__ import annotations
 from .base import Skill, SkillInfo, padrao
 
 
+class MenuSkill(Skill):
+    info = SkillInfo(
+        "abrir_menu", "Envia o menu real quando solicitado explicitamente.",
+        ("abra o menu", "como acesso o menu?"),
+    )
+    prioridade = 70
+    # A frase inteira deve pedir navegação. Menções, negações e relatos não bastam.
+    padroes = (padrao(
+        r"^\s*(?:pluto[,!]?\s+)?(?:por favor[, ]+)?"
+        r"(?:menu(?: principal)?|"
+        r"(?:(?:voce )?pode(?:ria)?\s+)?(?:abrir|abra|abre|mostrar|mostre|mostra|"
+        r"enviar|envie|manda|mandar|mande|exibir|exiba)(?:\s+para mim|\s+pra mim)?\s+(?:o\s+)?menu(?: principal)?|"
+        r"(?:me\s+)(?:mostra|mostre|manda|mande|envia|envie)\s+(?:o\s+)?menu(?: principal)?|"
+        r"(?:quero|gostaria de)\s+(?:ver|abrir|acessar|voltar (?:ao|para o))\s+(?:o\s+)?menu(?: principal)?|"
+        r"como\s+(?:eu\s+)?(?:(?:faco para|posso)\s+)?(?:abrir|abro|acessar|acesso|ver|vejo|chegar ao|voltar ao)\s+(?:o\s+)?menu(?: principal)?|"
+        r"onde\s+(?:fica|esta|encontro|acho)\s+(?:o\s+)?menu(?: principal)?|"
+        r"quais\s+(?:sao\s+)?(?:as\s+)?opcoes\s+(?:do|no)\s+menu(?: principal)?)"
+        r"\s*[,!? .]*(?:por favor[.!?]*)?\s*$"
+    ),)
+
+    async def executar(self, bot, update, context):
+        await bot.menu(update, context)
+
+
 class ConsultarGastosMesSkill(Skill):
     info = SkillInfo(
         "consultar_gastos_mes",
@@ -137,7 +161,7 @@ class RegistrarCompraSkill(Skill):
     )
 
     async def executar(self, bot, update, context):
-        await bot.executar_registro_compra(update, context)
+        await bot._processar_descricao_compra(update, context, update.message.text)
 
 
 class PlanejarEconomiaSkill(Skill):
@@ -156,6 +180,7 @@ class PlanejarEconomiaSkill(Skill):
 
 
 SKILLS_PADRAO = (
+    MenuSkill,
     ConsultarGastosMesSkill,
     PlanejarEconomiaSkill,
     CriarCategoriaSkill,

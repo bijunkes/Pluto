@@ -1,0 +1,44 @@
+diff --git a/src/telegram/telegram_bot.py b/src/telegram/telegram_bot.py
+index e8d989a..45af395 100644
+--- a/src/telegram/telegram_bot.py
++++ b/src/telegram/telegram_bot.py
+@@ -544,22 +544,12 @@ class TelegramBot:
+ 
+     async def _iniciar_conversa_financeira(self, update, context):
+         context.user_data["modo_conversa"] = True
+-        perfil = context.user_data.get("perfil_financeiro")
+-
+-        if perfil:
+-            texto = (
+-                "💬 *Conversa com o Pluto*\n\n"
+-                "Pode perguntar sobre orçamento, dívidas, economia ou investimentos."
+-            )
+-        else:
+-            context.user_data["entrevista_financeira"] = {
+-                "indice": 0,
+-                "respostas": [],
+-            }
+-            texto = (
+-                "💬 *Antes de começarmos, quero conhecer você um pouco.*\n\n"
+-                + self.PERGUNTAS_ENTREVISTA[0]
+-            )
++        context.user_data.pop("entrevista_financeira", None)
++        texto = (
++            "💬 *Conversa com o Pluto*\n\n"
++            "Sobre o que você quer conversar? Pode perguntar sobre finanças "
++            "ou pedir ajuda para usar o Pluto."
++        )
+ 
+         await update.callback_query.edit_message_text(
+             texto,
+@@ -1094,9 +1084,7 @@ class TelegramBot:
+             return True
+ 
+         if context.user_data.get("modo_conversa"):
+-            if "entrevista_financeira" in context.user_data:
+-                await self._continuar_entrevista_financeira(update, context, texto)
+-                return True
++            context.user_data.pop("entrevista_financeira", None)
+             if skill_direta and skill_direta.info.nome != "registrar_compra":
+                 context.user_data.pop("modo_conversa", None)
+                 await skill_direta.executar(self, update, context)

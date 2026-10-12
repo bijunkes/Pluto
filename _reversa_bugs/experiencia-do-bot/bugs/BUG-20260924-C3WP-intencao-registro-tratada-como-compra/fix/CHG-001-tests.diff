@@ -1,0 +1,13 @@
+diff --git a/tests/test_skill_router.py b/tests/test_skill_router.py
+--- a/tests/test_skill_router.py
++++ b/tests/test_skill_router.py
+@@
++        ("Quero registrar uma compra", "iniciar_registro_compra"),
+@@
++def test_pedido_para_registrar_compra_solicita_descricao(monkeypatch):
++    # A intenção abre o estado guiado e não chama CompraService.
++    ...
++
++def test_descricao_seguinte_e_analisada_como_compra(monkeypatch):
++    # A mensagem seguinte consome o estado e é analisada como compra.
++    ...

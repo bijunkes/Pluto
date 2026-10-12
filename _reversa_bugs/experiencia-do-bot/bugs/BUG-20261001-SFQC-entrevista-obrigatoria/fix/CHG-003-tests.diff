@@ -1,0 +1,55 @@
+diff --git a/tests/test_skill_router.py b/tests/test_skill_router.py
+index 794f806..5bab1be 100644
+--- a/tests/test_skill_router.py
++++ b/tests/test_skill_router.py
+@@ -233,3 +233,50 @@ def test_estados_do_usuario_sao_persistidos(monkeypatch, tmp_path):
+     assert bot.app.persistence.filepath == tmp_path / "data" / "telegram_state.pickle"
+     assert bot.app.persistence.store_data.user_data is True
+     assert bot.app.persistence.store_data.chat_data is False
++
++
++@pytest.mark.parametrize("perfil", [None, {"objetivo": "organizar gastos"}])
++def test_falar_com_pluto_abre_conversa_sem_entrevista(perfil):
++    bot = TelegramBot.__new__(TelegramBot)
++    bot._responder_callback = AsyncMock(return_value=True)
++    query = SimpleNamespace(data="menu:conversa", edit_message_text=AsyncMock())
++    update = SimpleNamespace(callback_query=query)
++    context = SimpleNamespace(user_data={
++        "entrevista_financeira": {"indice": 1, "respostas": ["economizar"]},
++    })
++    if perfil:
++        context.user_data["perfil_financeiro"] = perfil
++
++    asyncio.run(bot.menu_callback(update, context))
++
++    assert context.user_data["modo_conversa"] is True
++    assert "entrevista_financeira" not in context.user_data
++    assert context.user_data.get("perfil_financeiro") == perfil
++    assert "Sobre o que" in query.edit_message_text.call_args.args[0]
++
++
++@pytest.mark.parametrize("entrevista_antiga", [False, True])
++def test_pergunta_geral_e_respondida_sem_renda(entrevista_antiga):
++    bot, update, context = _mensagem_bot("O que são juros compostos?")
++    context.user_data["modo_conversa"] = True
++    if entrevista_antiga:
++        context.user_data["entrevista_financeira"] = {"indice": 1, "respostas": ["oi"]}
++
++    asyncio.run(bot.receber_mensagem(update, context))
++
++    bot._responder_conversa_financeira.assert_awaited_once_with(
++        update, context, update.message.text
++    )
++    assert "entrevista_financeira" not in context.user_data
++    assert "perfil_financeiro" not in context.user_data
++
++
++def test_pedido_de_plano_continua_solicitando_salario():
++    bot, update, context = _mensagem_bot("Quero economizar")
++    context.user_data["modo_conversa"] = True
++
++    asyncio.run(bot.receber_mensagem(update, context))
++
++    assert context.user_data["planejamento_economia"] is True
++    assert "salário líquido" in update.message.reply_text.call_args.args[0]
++    bot._responder_conversa_financeira.assert_not_awaited()

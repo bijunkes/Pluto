@@ -1,0 +1,63 @@
+import asyncio
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock
+
+import pytest
+from telegram.error import BadRequest
+
+from src.telegram.telegram_bot import TelegramBot
+
+
+def _callback_update(erro=None):
+    query = SimpleNamespace(
+        answer=AsyncMock(side_effect=erro),
+        data="menu:principal",
+        edit_message_text=AsyncMock(),
+    )
+    mensagem = SimpleNamespace(reply_text=AsyncMock())
+    update = SimpleNamespace(
+        callback_query=query,
+        effective_message=mensagem,
+    )
+    context = SimpleNamespace(user_data={})
+    return update, context
+
+
+def _bot():
+    bot = TelegramBot.__new__(TelegramBot)
+    bot._criar_menu_principal = Mock(return_value=Mock())
+    return bot
+
+
+def test_callback_expirado_orienta_usuario_sem_executar_acao():
+    bot = _bot()
+    update, context = _callback_update(
+        BadRequest(
+            "Query is too old and response timeout expired or query id is invalid"
+        )
+    )
+
+    asyncio.run(bot.menu_callback(update, context))
+
+    update.effective_message.reply_text.assert_awaited_once_with(
+        "Esse botão expirou. Use /menu para abrir opções atualizadas."
+    )
+    update.callback_query.edit_message_text.assert_not_awaited()
+
+
+def test_callback_valido_continua_executando_acao():
+    bot = _bot()
+    update, context = _callback_update()
+
+    asyncio.run(bot.menu_callback(update, context))
+
+    update.callback_query.answer.assert_awaited_once()
+    update.callback_query.edit_message_text.assert_awaited_once()
+
+
+def test_erro_inesperado_do_callback_nao_e_silenciado():
+    bot = _bot()
+    update, context = _callback_update(RuntimeError("falha inesperada"))
+
+    with pytest.raises(RuntimeError, match="falha inesperada"):
+        asyncio.run(bot.menu_callback(update, context))

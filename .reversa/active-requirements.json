@@ -1,0 +1,10 @@
+{
+  "schema-version": 1,
+  "feature-dir": "_reversa_forward/001-intencoes-financeiras",
+  "feature-id": "001",
+  "short-name": "intencoes-financeiras",
+  "started-at": "2026-09-24T00:00:00Z",
+  "current-stage": "requirements",
+  "stages-completed": [],
+  "paused-features": []
+}

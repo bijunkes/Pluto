@@ -1,0 +1,6 @@
+schema_version: 1
+# architecture.md e domain.md ainda não existem na extração Reversa.
+# Execute /reversa para gerar e depois curar este vocabulário.
+area: []
+module: []
+feature: []

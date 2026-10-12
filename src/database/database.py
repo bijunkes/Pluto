@@ -576,6 +576,47 @@ class Database:
     # COMPRAS
     # =========================================================
 
+    @staticmethod
+    def preparar_tabela_lembretes(cursor):
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS lembretes_gastos (
+                telegram_id BIGINT PRIMARY KEY,
+                ultimo_lancamento TIMESTAMPTZ NOT NULL,
+                ultimo_envio TIMESTAMPTZ
+            )
+        """)
+
+    @classmethod
+    def listar_lembretes_gastos_pendentes(cls):
+        with psycopg.connect(os.getenv("DATABASE_URL"), prepare_threshold=None) as conn:
+            with conn.cursor() as cursor:
+                cls.preparar_tabela_lembretes(cursor)
+                # Histórico anterior à implantação: usa a data disponível da compra.
+                cursor.execute("""
+                    INSERT INTO lembretes_gastos (telegram_id, ultimo_lancamento)
+                    SELECT telegram_id, MAX(data) AT TIME ZONE 'America/Sao_Paulo'
+                    FROM compras
+                    GROUP BY telegram_id
+                    HAVING MAX(data) IS NOT NULL
+                    ON CONFLICT (telegram_id) DO NOTHING
+                """)
+                cursor.execute("""
+                    SELECT telegram_id, ultimo_lancamento
+                    FROM lembretes_gastos
+                    WHERE GREATEST(ultimo_lancamento, ultimo_envio)
+                        <= CURRENT_TIMESTAMP - INTERVAL '36 hours'
+                """)
+                return cursor.fetchall()
+
+    def registrar_envio_lembrete_gastos(self, ultimo_lancamento):
+        with self.conectar() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    UPDATE lembretes_gastos
+                    SET ultimo_envio = CURRENT_TIMESTAMP
+                    WHERE telegram_id = %s AND ultimo_lancamento = %s
+                """, (self.usuario_id, ultimo_lancamento))
+
     def salvar_compra(self, produto, categoria, conta_id, valor, data_compra=None):
         """
         Salva uma compra associada a uma categoria e a uma
@@ -644,6 +685,15 @@ class Database:
 
                 if cursor.rowcount == 0:
                     raise ValueError("Conta não encontrada ou inativa.")
+
+                self.preparar_tabela_lembretes(cursor)
+                cursor.execute("""
+                    INSERT INTO lembretes_gastos (telegram_id, ultimo_lancamento)
+                    VALUES (%s, CURRENT_TIMESTAMP)
+                    ON CONFLICT (telegram_id) DO UPDATE
+                    SET ultimo_lancamento = EXCLUDED.ultimo_lancamento,
+                        ultimo_envio = NULL
+                """, (self.usuario_id,))
 
                 return compra_id
 
