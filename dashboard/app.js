@@ -290,6 +290,17 @@ function renderizarContas() {
     `;
 
 
+        card.insertAdjacentHTML(
+            "beforeend",
+            `
+            <div class="acoes-item">
+                <button type="button" class="btn-mini" data-acao="editar-conta" data-id="${conta.id}" title="Editar conta" aria-label="Editar conta">✏️</button>
+                <button type="button" class="btn-mini perigo" data-acao="excluir-conta" data-id="${conta.id}" title="Excluir conta" aria-label="Excluir conta">🗑️</button>
+            </div>
+            `
+        );
+
+
         lista.appendChild(card);
 
     });
@@ -408,6 +419,20 @@ function renderizarCategorias() {
             categoria.nome;
 
 
+        // Categorias padrão não podem ser alteradas nem excluídas.
+        if (categoria.tipo === "PERSONALIZADA") {
+
+            item.insertAdjacentHTML(
+                "beforeend",
+                `
+                <button type="button" class="btn-mini" data-acao="editar-categoria" data-id="${categoria.id}" title="Editar categoria" aria-label="Editar categoria">✏️</button>
+                <button type="button" class="btn-mini perigo" data-acao="excluir-categoria" data-id="${categoria.id}" title="Excluir categoria" aria-label="Excluir categoria">🗑️</button>
+                `
+            );
+
+        }
+
+
         lista.appendChild(item);
 
     });
@@ -475,6 +500,11 @@ function renderizarCompras() {
         <strong class="compra-valor">
             ${formatarMoeda(compra.valor)}
         </strong>
+
+        <div class="acoes-item">
+            <button type="button" class="btn-mini" data-acao="editar-compra" data-id="${compra.id}" title="Editar compra" aria-label="Editar compra">✏️</button>
+            <button type="button" class="btn-mini perigo" data-acao="excluir-compra" data-id="${compra.id}" title="Excluir compra" aria-label="Excluir compra">🗑️</button>
+        </div>
 
     `;
 
@@ -1232,6 +1262,9 @@ async function inicializarDashboard() {
 
         configurarFormularioCategoria();
 
+        configurarAcoesItens();
+
+
         configurarLogout();
 
 
@@ -1258,6 +1291,774 @@ async function inicializarDashboard() {
         }
 
     }
+
+}
+
+
+// ============================================================
+// EDITAR E EXCLUIR (CONTAS E COMPRAS)
+// ============================================================
+
+let contaEmEdicao = null;
+let compraEmEdicao = null;
+
+// ============================================================
+// AVISOS (TOAST) E CONFIRMAÇÃO
+// ============================================================
+
+function mostrarAviso(mensagem, tipo = "erro") {
+
+    let container =
+        document.getElementById("toasts");
+
+    if (!container) {
+
+        container = document.createElement("div");
+        container.id = "toasts";
+        container.className = "toasts";
+        container.setAttribute("role", "status");
+        container.setAttribute("aria-live", "polite");
+
+        document.body.appendChild(container);
+
+    }
+
+    const aviso = document.createElement("div");
+
+    aviso.className = `toast ${tipo}`;
+    aviso.textContent = mensagem;
+
+    const remover = () => aviso.remove();
+
+    aviso.addEventListener("click", remover);
+
+    setTimeout(remover, 5000);
+
+    container.appendChild(aviso);
+
+}
+
+function confirmar({ titulo, mensagem, textoConfirmar = "Confirmar" }) {
+
+    return new Promise(resolve => {
+
+        const modal = document.createElement("dialog");
+
+        modal.className = "modal";
+
+        modal.innerHTML = `
+        <form class="modal-form">
+            <h3></h3>
+            <p class="modal-texto"></p>
+            <div class="modal-acoes">
+                <button type="button" class="botao-secundario" data-cancelar>Cancelar</button>
+                <button type="submit" class="botao botao-perigo"></button>
+            </div>
+        </form>
+        `;
+
+        // textContent evita interpretar HTML vindo dos nomes digitados.
+        modal.querySelector("h3").textContent = titulo;
+        modal.querySelector(".modal-texto").textContent = mensagem;
+        modal.querySelector(".botao-perigo").textContent = textoConfirmar;
+
+        let confirmado = false;
+
+        modal.querySelector("form").addEventListener("submit", event => {
+            event.preventDefault();
+            confirmado = true;
+            modal.close();
+        });
+
+        modal.querySelector("[data-cancelar]").addEventListener(
+            "click",
+            () => modal.close()
+        );
+
+        modal.addEventListener("click", event => {
+            if (event.target === modal) {
+                modal.close();
+            }
+        });
+
+        // Fecha por Cancelar, Esc, clique no fundo ou confirmação.
+        modal.addEventListener("close", () => {
+            modal.remove();
+            resolve(confirmado);
+        });
+
+        document.body.appendChild(modal);
+
+        modal.showModal();
+
+    });
+
+}
+
+async function atualizarConta(contaId, dados) {
+
+    await apiFetch(
+        `/usuarios/${usuarioIdSessao}/contas/${contaId}`,
+        {
+            method: "PUT",
+            body: JSON.stringify(dados)
+        }
+    );
+
+    // O nome da conta aparece nas compras, então recarrega as duas listas.
+    await Promise.all([
+        listarContas(),
+        listarCompras()
+    ]);
+
+}
+
+async function excluirConta(contaId) {
+
+    await apiFetch(
+        `/usuarios/${usuarioIdSessao}/contas/${contaId}`,
+        { method: "DELETE" }
+    );
+
+    await Promise.all([
+        listarContas(),
+        listarCompras()
+    ]);
+
+}
+
+async function atualizarCompra(compraId, dados) {
+
+    await apiFetch(
+        `/usuarios/${usuarioIdSessao}/compras/${compraId}`,
+        {
+            method: "PUT",
+            body: JSON.stringify(dados)
+        }
+    );
+
+    // O saldo das contas muda junto com a compra.
+    await Promise.all([
+        listarCompras(),
+        listarContas()
+    ]);
+
+}
+
+async function excluirCompra(compraId) {
+
+    await apiFetch(
+        `/usuarios/${usuarioIdSessao}/compras/${compraId}`,
+        { method: "DELETE" }
+    );
+
+    await Promise.all([
+        listarCompras(),
+        listarContas()
+    ]);
+
+}
+
+function abrirModalConta(contaId) {
+
+    const conta =
+        contas.find(c => c.id === contaId);
+
+    if (!conta) return;
+
+    contaEmEdicao = conta.id;
+
+    document.getElementById("campo-editar-nome-conta").value =
+        conta.nome;
+
+    document.getElementById("campo-editar-tipo-conta").value =
+        conta.tipo;
+
+    document.getElementById("editar-conta-erro").textContent = "";
+
+    document.getElementById("modal-conta").showModal();
+
+}
+
+function abrirModalCompra(compraId) {
+
+    const compra =
+        compras.find(c => c.id === compraId);
+
+    if (!compra) return;
+
+    compraEmEdicao = compra.id;
+
+
+    const selectCategoria =
+        document.getElementById("campo-editar-categoria");
+
+    selectCategoria.innerHTML = "";
+
+    categorias.forEach(categoria => {
+        selectCategoria.appendChild(
+            new Option(categoria.nome, categoria.nome)
+        );
+    });
+
+    selectCategoria.value = compra.categoria;
+
+
+    const selectConta =
+        document.getElementById("campo-editar-conta");
+
+    selectConta.innerHTML = "";
+
+    // A compra guarda só o nome da conta, então procura o id pelo nome.
+    const contaAtual =
+        contas.find(c => c.nome === compra.conta);
+
+    if (!contaAtual) {
+        selectConta.appendChild(
+            new Option("(conta removida — escolha outra)", "")
+        );
+    }
+
+    contas.forEach(conta => {
+        selectConta.appendChild(
+            new Option(conta.nome, String(conta.id))
+        );
+    });
+
+    if (contaAtual) {
+        selectConta.value = String(contaAtual.id);
+    }
+
+
+    document.getElementById("campo-editar-produto").value =
+        compra.produto;
+
+    document.getElementById("campo-editar-valor").value =
+        compra.valor;
+
+    document.getElementById("editar-compra-erro").textContent = "";
+
+    document.getElementById("modal-compra").showModal();
+
+}
+
+async function confirmarExclusaoConta(contaId) {
+
+    const conta =
+        contas.find(c => c.id === contaId);
+
+    if (!conta) return;
+
+    const confirmado = await confirmar({
+        titulo: "Excluir conta",
+        mensagem:
+            `Excluir a conta "${conta.nome}"? Ela deixa de aparecer no ` +
+            "dashboard, mas as compras já registradas continuam no " +
+            "histórico. Você pode reativá-la depois em " +
+            "\"Ver contas desativadas\".",
+        textoConfirmar: "Excluir"
+    });
+
+    if (!confirmado) return;
+
+    try {
+        await excluirConta(contaId);
+        await recarregarContasInativasSeAbertas();
+    } catch (error) {
+        mostrarAviso(error.message);
+    }
+
+}
+
+async function confirmarExclusaoCompra(compraId) {
+
+    const compra =
+        compras.find(c => c.id === compraId);
+
+    if (!compra) return;
+
+    const confirmado = await confirmar({
+        titulo: "Excluir compra",
+        mensagem:
+            `Excluir a compra "${compra.produto}" ` +
+            `(${formatarMoeda(compra.valor)})? ` +
+            "O valor volta para o saldo da conta.",
+        textoConfirmar: "Excluir"
+    });
+
+    if (!confirmado) return;
+
+    try {
+        await excluirCompra(compraId);
+    } catch (error) {
+        mostrarAviso(error.message);
+    }
+
+}
+
+// ============================================================
+// CONTAS DESATIVADAS (VER E REATIVAR)
+// ============================================================
+
+let contasInativas = [];
+
+async function listarContasInativas() {
+
+    const todas = await apiFetch(
+        `/usuarios/${usuarioIdSessao}/contas?apenas_ativas=false`
+    );
+
+    contasInativas = todas.filter(conta => !conta.ativa);
+
+    renderizarContasInativas();
+
+}
+
+function renderizarContasInativas() {
+
+    const lista =
+        document.getElementById("lista-contas-inativas");
+
+    const vazio =
+        document.getElementById("contas-inativas-vazio");
+
+    if (!lista) return;
+
+    lista.innerHTML = "";
+
+    if (vazio) {
+        vazio.hidden = contasInativas.length > 0;
+    }
+
+    contasInativas.forEach(conta => {
+
+        const card =
+            document.createElement("div");
+
+        card.className = "conta-card inativa";
+
+        const tipo =
+            formatarTipoConta(conta.tipo);
+
+        const saldo =
+            Number(conta.saldo ?? 0);
+
+        card.innerHTML = `
+
+        <div class="conta-card-topo">
+
+            <span class="conta-icone">
+                ${tipo.icone}
+            </span>
+
+            <span class="conta-tipo">
+                ${tipo.nome}
+            </span>
+
+        </div>
+
+        <h3>
+            ${escapeHtml(conta.nome)}
+        </h3>
+
+        <p class="conta-saldo">
+            ${formatarMoeda(saldo)}
+        </p>
+
+        <div class="acoes-item">
+            <button type="button" class="btn-mini" data-acao="reativar-conta" data-id="${conta.id}" title="Reativar conta" aria-label="Reativar conta">♻️ Reativar</button>
+        </div>
+
+        `;
+
+        lista.appendChild(card);
+
+    });
+
+}
+
+async function reativarConta(contaId) {
+
+    await apiFetch(
+        `/usuarios/${usuarioIdSessao}/contas/${contaId}/reativar`,
+        { method: "POST" }
+    );
+
+    await Promise.all([
+        listarContas(),
+        listarContasInativas(),
+        listarCompras()
+    ]);
+
+}
+
+async function recarregarContasInativasSeAbertas() {
+
+    const area =
+        document.getElementById("area-contas-inativas");
+
+    if (area && !area.hidden) {
+        await listarContasInativas();
+    }
+
+}
+
+async function alternarContasInativas() {
+
+    const area =
+        document.getElementById("area-contas-inativas");
+
+    const botao =
+        document.getElementById("btn-contas-inativas");
+
+    if (!area || !botao) return;
+
+    const abrindo = area.hidden;
+
+    if (abrindo) {
+
+        try {
+            await listarContasInativas();
+        } catch (error) {
+            mostrarAviso(error.message);
+            return;
+        }
+
+    }
+
+    area.hidden = !abrindo;
+
+    botao.textContent = abrindo
+        ? "Ocultar contas desativadas"
+        : "Ver contas desativadas";
+
+    botao.setAttribute("aria-expanded", String(abrindo));
+
+}
+
+let categoriaEmEdicao = null;
+
+async function atualizarCategoria(categoriaId, dados) {
+
+    await apiFetch(
+        `/usuarios/${usuarioIdSessao}/categorias/${categoriaId}`,
+        {
+            method: "PUT",
+            body: JSON.stringify(dados)
+        }
+    );
+
+    // O nome da categoria aparece nas compras, então recarrega as duas listas.
+    await Promise.all([
+        listarCategorias(),
+        listarCompras()
+    ]);
+
+}
+
+async function excluirCategoria(categoriaId) {
+
+    await apiFetch(
+        `/usuarios/${usuarioIdSessao}/categorias/${categoriaId}`,
+        { method: "DELETE" }
+    );
+
+    await listarCategorias();
+
+}
+
+function abrirModalCategoria(categoriaId) {
+
+    const categoria =
+        categorias.find(c => c.id === categoriaId);
+
+    if (!categoria) return;
+
+    categoriaEmEdicao = categoria.id;
+
+    document.getElementById("campo-editar-nome-categoria").value =
+        categoria.nome;
+
+    document.getElementById("editar-categoria-erro").textContent = "";
+
+    document.getElementById("modal-categoria").showModal();
+
+}
+
+async function confirmarExclusaoCategoria(categoriaId) {
+
+    const categoria =
+        categorias.find(c => c.id === categoriaId);
+
+    if (!categoria) return;
+
+    const confirmado = await confirmar({
+        titulo: "Excluir categoria",
+        mensagem:
+            `Excluir a categoria "${categoria.nome}"? ` +
+            "Isso só é permitido se nenhuma compra estiver usando ela.",
+        textoConfirmar: "Excluir"
+    });
+
+    if (!confirmado) return;
+
+    try {
+        await excluirCategoria(categoriaId);
+    } catch (error) {
+        // Ex.: categoria em uso por compras.
+        mostrarAviso(error.message);
+    }
+
+}
+
+function configurarAcoesItens() {
+
+    // Um único listener por lista (delegação), já que os itens
+    // são recriados a cada renderização.
+    const aoClicar = async event => {
+
+        const botao =
+            event.target.closest("[data-acao]");
+
+        if (!botao) return;
+
+        const id = Number(botao.dataset.id);
+
+        switch (botao.dataset.acao) {
+
+            case "editar-conta":
+                abrirModalConta(id);
+                break;
+
+            case "excluir-conta":
+                await confirmarExclusaoConta(id);
+                break;
+
+            case "reativar-conta":
+                try {
+                    await reativarConta(id);
+                } catch (error) {
+                    mostrarAviso(error.message);
+                }
+                break;
+
+            case "editar-categoria":
+                abrirModalCategoria(id);
+                break;
+
+            case "excluir-categoria":
+                await confirmarExclusaoCategoria(id);
+                break;
+
+            case "editar-compra":
+                abrirModalCompra(id);
+                break;
+
+            case "excluir-compra":
+                await confirmarExclusaoCompra(id);
+                break;
+
+        }
+
+    };
+
+    document
+        .getElementById("lista-contas")
+        ?.addEventListener("click", aoClicar);
+
+    document
+        .getElementById("lista-compras")
+        ?.addEventListener("click", aoClicar);
+
+
+    document
+        .getElementById("lista-categorias")
+        ?.addEventListener("click", aoClicar);
+
+
+    document
+        .getElementById("lista-contas-inativas")
+        ?.addEventListener("click", aoClicar);
+
+    document
+        .getElementById("btn-contas-inativas")
+        ?.addEventListener("click", alternarContasInativas);
+
+
+    // Fechar modais: botão Cancelar e clique no fundo escuro.
+    document.querySelectorAll(".modal").forEach(modal => {
+
+        modal
+            .querySelectorAll("[data-fechar]")
+            .forEach(botao => {
+                botao.addEventListener(
+                    "click",
+                    () => modal.close()
+                );
+            });
+
+        modal.addEventListener("click", event => {
+            if (event.target === modal) {
+                modal.close();
+            }
+        });
+
+    });
+
+
+    // Salvar conta.
+    document
+        .getElementById("form-editar-conta")
+        .addEventListener("submit", async event => {
+
+            event.preventDefault();
+
+            const erro =
+                document.getElementById("editar-conta-erro");
+
+            const botao =
+                event.target.querySelector("[type=submit]");
+
+            erro.textContent = "";
+
+            const nome =
+                document
+                    .getElementById("campo-editar-nome-conta")
+                    .value
+                    .trim();
+
+            const tipo =
+                document
+                    .getElementById("campo-editar-tipo-conta")
+                    .value;
+
+            if (!nome) {
+                erro.textContent = "Informe o nome da conta.";
+                return;
+            }
+
+            botao.disabled = true;
+
+            try {
+                await atualizarConta(contaEmEdicao, { nome, tipo });
+                document.getElementById("modal-conta").close();
+            } catch (error) {
+                erro.textContent = error.message;
+            } finally {
+                botao.disabled = false;
+            }
+
+        });
+
+
+    // Salvar categoria.
+    document
+        .getElementById("form-editar-categoria")
+        .addEventListener("submit", async event => {
+
+            event.preventDefault();
+
+            const erro =
+                document.getElementById("editar-categoria-erro");
+
+            const botao =
+                event.target.querySelector("[type=submit]");
+
+            erro.textContent = "";
+
+            const nome =
+                document
+                    .getElementById("campo-editar-nome-categoria")
+                    .value
+                    .trim();
+
+            if (!nome) {
+                erro.textContent = "Informe o nome da categoria.";
+                return;
+            }
+
+            botao.disabled = true;
+
+            try {
+                await atualizarCategoria(categoriaEmEdicao, { nome });
+                document.getElementById("modal-categoria").close();
+            } catch (error) {
+                erro.textContent = error.message;
+            } finally {
+                botao.disabled = false;
+            }
+
+        });
+
+
+    // Salvar compra.
+    document
+        .getElementById("form-editar-compra")
+        .addEventListener("submit", async event => {
+
+            event.preventDefault();
+
+            const erro =
+                document.getElementById("editar-compra-erro");
+
+            const botao =
+                event.target.querySelector("[type=submit]");
+
+            erro.textContent = "";
+
+            const produto =
+                document
+                    .getElementById("campo-editar-produto")
+                    .value
+                    .trim();
+
+            const categoria =
+                document
+                    .getElementById("campo-editar-categoria")
+                    .value;
+
+            const contaValor =
+                document
+                    .getElementById("campo-editar-conta")
+                    .value;
+
+            const valor =
+                Number(
+                    document
+                        .getElementById("campo-editar-valor")
+                        .value
+                );
+
+            if (!produto) {
+                erro.textContent = "Informe o produto.";
+                return;
+            }
+
+            if (!Number.isFinite(valor) || valor < 0) {
+                erro.textContent = "Informe um valor válido.";
+                return;
+            }
+
+            botao.disabled = true;
+
+            try {
+
+                await atualizarCompra(compraEmEdicao, {
+                    produto,
+                    categoria,
+                    contaId: contaValor ? Number(contaValor) : undefined,
+                    valor
+                });
+
+                document.getElementById("modal-compra").close();
+
+            } catch (error) {
+                erro.textContent = error.message;
+            } finally {
+                botao.disabled = false;
+            }
+
+        });
 
 }
 

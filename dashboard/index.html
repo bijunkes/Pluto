@@ -201,6 +201,36 @@
         id="conta-erro"
       ></p>
 
+      <button
+        type="button"
+        class="link-botao"
+        id="btn-contas-inativas"
+        aria-expanded="false"
+      >
+        Ver contas desativadas
+      </button>
+
+      <div
+        class="area-inativas"
+        id="area-contas-inativas"
+        hidden
+      >
+
+        <div
+          class="contas-lista"
+          id="lista-contas-inativas"
+        ></div>
+
+        <p
+          class="vazio"
+          id="contas-inativas-vazio"
+          hidden
+        >
+          Você não tem contas desativadas.
+        </p>
+
+      </div>
+
     </section>
 
     <!-- CATEGORIAS -->
@@ -307,6 +337,187 @@
     </section>
 
   </div>
+
+  <!-- ============================================================
+  MODAL: EDITAR CONTA
+  ============================================================ -->
+
+  <dialog
+    class="modal"
+    id="modal-conta"
+  >
+
+    <form
+      class="modal-form"
+      id="form-editar-conta"
+    >
+
+      <h3>Editar conta</h3>
+
+      <label class="modal-campo">
+        <span>Nome</span>
+        <input
+          type="text"
+          id="campo-editar-nome-conta"
+          required
+        >
+      </label>
+
+      <label class="modal-campo">
+        <span>Tipo</span>
+        <select id="campo-editar-tipo-conta">
+          <option value="CARTEIRA">Carteira</option>
+          <option value="CONTA_CORRENTE">Conta corrente</option>
+          <option value="POUPANCA">Poupança</option>
+          <option value="INVESTIMENTO">Investimento</option>
+        </select>
+      </label>
+
+      <p
+        class="form-erro"
+        id="editar-conta-erro"
+      ></p>
+
+      <div class="modal-acoes">
+        <button
+          type="button"
+          class="botao-secundario"
+          data-fechar
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          class="botao"
+        >
+          Salvar
+        </button>
+      </div>
+
+    </form>
+
+  </dialog>
+
+  <!-- ============================================================
+  MODAL: EDITAR COMPRA
+  ============================================================ -->
+
+  <dialog
+    class="modal"
+    id="modal-compra"
+  >
+
+    <form
+      class="modal-form"
+      id="form-editar-compra"
+    >
+
+      <h3>Editar compra</h3>
+
+      <label class="modal-campo">
+        <span>Produto</span>
+        <input
+          type="text"
+          id="campo-editar-produto"
+          required
+        >
+      </label>
+
+      <label class="modal-campo">
+        <span>Categoria</span>
+        <select id="campo-editar-categoria"></select>
+      </label>
+
+      <label class="modal-campo">
+        <span>Conta</span>
+        <select id="campo-editar-conta"></select>
+      </label>
+
+      <label class="modal-campo">
+        <span>Valor</span>
+        <input
+          type="number"
+          id="campo-editar-valor"
+          step="0.01"
+          min="0"
+          required
+        >
+      </label>
+
+      <p
+        class="form-erro"
+        id="editar-compra-erro"
+      ></p>
+
+      <div class="modal-acoes">
+        <button
+          type="button"
+          class="botao-secundario"
+          data-fechar
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          class="botao"
+        >
+          Salvar
+        </button>
+      </div>
+
+    </form>
+
+  </dialog>
+
+  <!-- ============================================================
+  MODAL: EDITAR CATEGORIA
+  ============================================================ -->
+
+  <dialog
+    class="modal"
+    id="modal-categoria"
+  >
+
+    <form
+      class="modal-form"
+      id="form-editar-categoria"
+    >
+
+      <h3>Editar categoria</h3>
+
+      <label class="modal-campo">
+        <span>Nome</span>
+        <input
+          type="text"
+          id="campo-editar-nome-categoria"
+          required
+        >
+      </label>
+
+      <p
+        class="form-erro"
+        id="editar-categoria-erro"
+      ></p>
+
+      <div class="modal-acoes">
+        <button
+          type="button"
+          class="botao-secundario"
+          data-fechar
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          class="botao"
+        >
+          Salvar
+        </button>
+      </div>
+
+    </form>
+
+  </dialog>
 
   <script src="app.js"></script>
 
