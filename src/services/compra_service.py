@@ -216,3 +216,25 @@ class CompraService:
         resultado["data_compra"] = data_hora
 
         return resultado
+
+    def buscar_compra_detalhada(self, compra_id):
+        return self.database.buscar_compra_detalhada(compra_id)
+
+
+    def atualizar_compra(
+        self,
+        compra_id,
+        produto=None,
+        categoria_id=None,
+        conta_id=None,
+        valor=None,
+        data_compra=None
+    ):
+        return self.database.atualizar_compra(
+            compra_id=compra_id,
+            produto=produto,
+            categoria_id=categoria_id,
+            conta_id=conta_id,
+            valor=valor,
+            data_compra=data_compra
+        )

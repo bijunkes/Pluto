@@ -415,6 +415,29 @@ class Database:
                 if cursor.rowcount == 0:
                     raise ValueError("Conta não encontrada ou já inativa.")
 
+    def reativar_conta(self, conta_id):
+        """
+        Reativa uma conta que havia sido desativada.
+        """
+
+        with self.conectar() as conn:
+
+            with conn.cursor() as cursor:
+
+                cursor.execute(
+                    """
+                    UPDATE contas
+                    SET ativa = TRUE
+                    WHERE id = %s
+                    AND telegram_id = %s
+                    AND ativa = FALSE
+                    """,
+                    (conta_id, self.usuario_id),
+                )
+
+                if cursor.rowcount == 0:
+                    raise ValueError("Conta não encontrada ou já ativa.")
+
     def conta_existe(self, nome):
         """
         Verifica se uma conta ativa existe
@@ -845,7 +868,7 @@ class Database:
                 antiga_categoria, antiga_conta, antigo_valor = atual
                 nova_categoria = antiga_categoria if categoria_id is None else categoria_id
                 nova_conta = antiga_conta if conta_id is None else conta_id
-                novo_valor = antigo_valor if valor is None else valor
+                novo_valor = antigo_valor if valor is None else Decimal(str(valor))
 
                 cursor.execute(
                     """

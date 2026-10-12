@@ -54,6 +54,7 @@ class CategoriaOut(BaseModel):
 
     id: int
     nome: str
+    tipo: str
 
 
 class CategoriaUpdate(BaseModel):

@@ -176,6 +176,7 @@ def _categoria_para_dict(categoria):
     return {
         "id": categoria[0],
         "nome": categoria[1],
+        "tipo": categoria[2],
     }
 
 
@@ -288,15 +289,17 @@ def logout(response: Response):
 )
 def listar_contas(
     usuario_id: int,
+    apenas_ativas: bool = True,
     _: int = Depends(exigir_dono),
 ):
     """
-    Lista as contas ativas do usuário.
+    Lista as contas do usuário. Por padrão, só as ativas;
+    com apenas_ativas=false, inclui também as desativadas.
     """
 
     database = Database(usuario_id)
 
-    contas = database.listar_contas()
+    contas = database.listar_contas(apenas_ativas=apenas_ativas)
 
     return [
         _conta_para_dict(conta)
@@ -388,6 +391,43 @@ def atualizar_conta(
         )
 
     return _conta_para_dict(conta_atualizada)
+
+
+@app.post(
+    "/usuarios/{usuario_id}/contas/{conta_id}/reativar",
+    response_model=ContaOut,
+)
+def reativar_conta(
+    usuario_id: int,
+    conta_id: int,
+    _: int = Depends(exigir_dono),
+):
+    """
+    Reativa uma conta que havia sido desativada.
+    """
+
+    database = Database(usuario_id)
+
+    try:
+
+        database.reativar_conta(conta_id)
+
+    except ValueError as e:
+
+        raise HTTPException(
+            status_code=404,
+            detail=str(e),
+        )
+
+    conta = database.buscar_conta(conta_id)
+
+    if conta is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Conta não encontrada.",
+        )
+
+    return _conta_para_dict(conta)
 
 
 @app.delete(
